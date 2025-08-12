@@ -1,0 +1,9 @@
+Table Name,Columns
+Borrower,"borrower_id (PK), name, contact, required_rating, start_date, end_date"
+Lender,"lender_id (PK), name, age, contact, account_number"
+Admin,"admin_id (PK), name, email"
+Product,"product_id (PK), name, category, value, condition, availability, lender_id (FK)"
+Transaction,"transaction_id (PK), borrower_id (FK), lender_id (FK), product_id (FK), amount, status"
+User,"user_id (PK), name, contact, email, role, password_hash"
+ProductImages,"image_id (PK), product_id (FK), image_url"
+Ratings,"rating_id (PK), lender_id (FK), borrower_id (FK), score, review"
