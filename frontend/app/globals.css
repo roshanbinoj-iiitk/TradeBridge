@@ -1,1 +1,58 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --isabelline: 48 33% 97%; /* #f4f3ee */
+    --jet: 25 6% 22%; /* #3d3833 */
+    --taupe: 20 8% 26%; /* #463f3a */
+    --battleship-gray: 40 5% 54%; /* #8c8979 */
+    --platinum: 206 14% 85%; /* #d3d9de */
+
+    --background: var(--isabelline);
+    --foreground: var(--jet);
+    
+    --card: var(--isabelline);
+    --card-foreground: var(--jet);
+ 
+    --popover: var(--isabelline);
+    --popover-foreground: var(--jet);
+ 
+    --primary: var(--jet);
+    --primary-foreground: var(--isabelline);
+ 
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+ 
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+ 
+    --accent: var(--battleship-gray);
+    --accent-foreground: var(--isabelline);
+ 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: var(--platinum);
+    --input: var(--platinum);
+    --ring: var(--jet);
+ 
+    --radius: 0.5rem;
+  }
+
+  /* No dark mode specified, but leaving the structure for future use */
+  .dark {
+    /* Define dark theme variables here if needed */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}

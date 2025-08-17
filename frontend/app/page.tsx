@@ -1,8 +1,87 @@
+import { HeroParallax } from "@/components/aceternity/hero-parallax";
+import { parallaxProducts, featuredProducts, testimonials } from "@/lib/constants";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { HoverEffect } from "@/components/aceternity/hover-effect";
+import { Search, CheckCircle, ArrowRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { InfiniteMovingCards } from "@/components/aceternity/infinite-moving-cards";
+
 export default function Home() {
   return (
-    <div>
-      <h1 className="text-3xl font-bold underline">Welcome to TradeBridge!</h1>
-      <p className="mt-4">A student rental platform for IIIT Kottayam.</p>
-    </div>
+    <>
+      <HeroParallax 
+        products={parallaxProducts}
+        title={<>Rent Anything, <br /> From Anyone.</>}
+        subTitle="Your community's marketplace for borrowing and lending. Access what you need, when you need it, and earn by sharing what you have."
+        cta={
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="relative w-full sm:w-auto">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-battleship-gray" />
+              <Input placeholder="Search for a drone, camera, tent..." className="pl-10 w-full sm:w-80 h-12 text-base" />
+            </div>
+            <Button size="lg" className="h-12 text-base bg-jet text-isabelline hover:bg-taupe" asChild>
+              <Link href="/products">
+                Browse All Products <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+          </div>
+        }
+      />
+
+      <section className="py-20 md:py-32 bg-isabelline">
+        <div className="container mx-auto px-6">
+          <h2 className="text-3xl md:text-5xl font-bold text-center text-jet font-serif">
+            Explore Popular Categories
+          </h2>
+          <p className="text-lg text-taupe text-center mt-4 max-w-3xl mx-auto">
+            Find exactly what you're looking for. From weekend projects to grand adventures, it's all here.
+          </p>
+          <HoverEffect items={featuredProducts} />
+        </div>
+      </section>
+
+      <section id="how-it-works" className="py-20 md:py-32">
+        <div className="container mx-auto px-6 text-center">
+          <h2 className="text-3xl md:text-5xl font-bold text-jet font-serif">How It Works</h2>
+          <p className="text-lg text-taupe mt-4 max-w-3xl mx-auto">
+            Renting on TradeBridge is simple, secure, and convenient. Get started in just three easy steps.
+          </p>
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div className="flex flex-col items-center">
+              <div className="bg-jet text-isabelline rounded-full h-16 w-16 flex items-center justify-center text-2xl font-bold">1</div>
+              <h3 className="mt-6 text-2xl font-semibold text-jet">Find Your Item</h3>
+              <p className="mt-2 text-taupe">Browse our extensive catalog or search for a specific product. Filter by category, price, and availability to find the perfect match.</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="bg-jet text-isabelline rounded-full h-16 w-16 flex items-center justify-center text-2xl font-bold">2</div>
+              <h3 className="mt-6 text-2xl font-semibold text-jet">Request to Rent</h3>
+              <p className="mt-2 text-taupe">Select your rental dates and send a request to the owner. You'll be notified as soon as your request is approved.</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="bg-jet text-isabelline rounded-full h-16 w-16 flex items-center justify-center text-2xl font-bold">3</div>
+              <h3 className="mt-6 text-2xl font-semibold text-jet">Arrange Pickup & Return</h3>
+              <p className="mt-2 text-taupe">Coordinate with the owner for a smooth pickup. Enjoy your rental, and return it on the agreed-upon date. It's that simple!</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 md:py-32 bg-isabelline">
+        <div className="container mx-auto px-6 text-center">
+          <h2 className="text-3xl md:text-5xl font-bold text-jet font-serif">Join a Community Built on Trust</h2>
+          <p className="text-lg text-taupe mt-4 max-w-3xl mx-auto">
+            Hear from our members who are already saving money, earning extra income, and reducing waste.
+          </p>
+          <div className="mt-12 flex flex-col items-center justify-center">
+            <InfiniteMovingCards
+              items={testimonials}
+              direction="right"
+              speed="slow"
+            />
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
