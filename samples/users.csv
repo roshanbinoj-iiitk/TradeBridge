@@ -1,0 +1,11 @@
+id,name,contact,email,role,password_hash
+1,Alice Johnson,9876543210,alice.j@example.com,lender,$2b$12$Dssi6q1i.yV/C.uGjA8E3.8g.2kY1nOaG
+2,Bob Williams,9876543211,bob.w@example.com,borrower,$2b$12$Hk.4wN2j.jL/O.pXbE9F2.9h.3lZ2pPbI
+3,Charlie Brown,9876543212,charlie.b@example.com,lender,$2b$12$Klm.8oP3q.rS/T.uVwG7Y.1i.4mB3qQcJ
+4,Diana Prince,9876543213,diana.p@example.com,borrower,$2b$12$Nop.0qR4s.tU/V.wXyH8Z.2j.5nC4rRdK
+5,Ethan Hunt,9876543214,ethan.h@example.com,lender,$2b$12$Qrs.2sT5u.vW/X.yZaI9A.3k.6oD5sSeL
+6,Fiona Glenanne,9876543215,fiona.g@example.com,borrower,$2b$12$Uvw.4uV6w.xY/Z.aBcB0B.4l.7pE6tTfM
+7,George Costanza,9876543216,george.c@example.com,lender,$2b$12$Xyz.6wX7x.yZ/A.bCdC1C.5m.8qF7uUgN
+8,Hannah Abbott,9876543217,hannah.a@example.com,borrower,$2b$12$Abc.8yZ8y.zA/B.cDeD2D.6n.9rG8vVhO
+9,Ian Malcolm,9876543218,ian.m@example.com,lender,$2b$12$Def.0zA9z.aB/C.dEfE3E.7o.0sH9wWiP
+10,Jane Doe,9876543219,jane.d@example.com,borrower,$2b$12$Ghi.2aB0a.bC/D.eFfF4F.8p.1tI0xXjQ

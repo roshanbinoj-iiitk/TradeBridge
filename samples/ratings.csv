@@ -1,0 +1,9 @@
+rating_id,transaction_id,rater_id,ratee_id,rating,comment
+401,301,2,1,5,"Great camera, exactly as described. Alice was very helpful."
+402,301,1,2,5,"Bob took great care of the equipment. Smooth transaction."
+403,302,4,3,4,"Drone worked well, but the battery life wasn't as long as expected. Overall good experience."
+404,305,10,9,5,"The bike was in perfect condition. Had a great time on the trails."
+405,305,9,10,5,"Jane returned the bike clean and on time. Excellent borrower."
+406,307,4,5,5,"Fantastic kayak! Easy pickup and drop-off."
+407,309,8,1,4,"Books were in good condition, a bit of wear on the covers but that's expected."
+408,311,2,7,5,"Professional tripod, very sturdy. George was easy to coordinate with."

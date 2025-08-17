@@ -1,0 +1,16 @@
+product_id,name,description,price,lender_id,start_date,end_date,category,value,condition,availability
+101,Canon EOS R5 Camera,"Full-frame mirrorless camera, body only.",1500.00,1,2025-09-01,2026-08-31,Electronics,350000.00,Like New,true
+102,DJI Mavic Air 2 Drone,"Compact drone with 4K video capability and 34-min flight time.",1200.50,3,2025-08-20,2026-08-19,Electronics,75000.00,Good,true
+103,Bosch Hammer Drill,"Heavy-duty corded hammer drill for concrete and masonry.",500.00,5,2025-09-10,2026-09-09,Tools,12000.00,Good,true
+104,Coleman 6-Person Tent,"Spacious dome tent for family camping trips.",800.75,7,2025-08-01,2025-12-31,Outdoor Gear,15000.00,Fair,true
+105,Mountain Bike - Trek Marlin 5,"29-inch wheels, size M frame. Perfect for trail riding.",950.00,9,2025-08-15,2026-08-14,Sports Equipment,60000.00,Like New,true
+106,Sony WH-1000XM4 Headphones,"Industry-leading noise-canceling headphones.",450.00,1,2025-09-01,2026-08-31,Electronics,28000.00,New,true
+107,Dewalt Circular Saw,"7-1/4 inch circular saw with electric brake.",600.00,3,2025-08-25,2026-08-24,Tools,13500.00,Good,false
+108,Kayak - Single Person,"Sit-on-top kayak with paddle and life vest.",1100.00,5,2025-08-01,2025-11-30,Outdoor Gear,30000.00,Good,true
+109,Portable Projector - Anker Nebula,"Capsule-sized projector, 100-inch picture.",750.25,7,2025-09-15,2026-09-14,Electronics,45000.00,Like New,true
+110,Pressure Washer,"Electric pressure washer, 2000 PSI.",850.00,9,2025-08-18,2026-08-17,Tools,18000.00,Fair,true
+111,Complete Harry Potter Book Set,"Hardcover box set of all 7 books.",200.00,1,2025-08-01,2026-07-31,Books,5000.00,Good,true
+112,GoPro HERO10 Black,"Waterproof action camera with 5.3K video.",900.00,3,2025-09-05,2026-09-04,Electronics,55000.00,Like New,true
+113,Camping Stove - 2 Burner,"Propane camping stove for outdoor cooking.",300.50,5,2025-08-10,2025-12-10,Outdoor Gear,6000.00,Good,false
+114,Professional Tripod,"Manfrotto tripod for heavy cameras and video equipment.",400.00,7,2025-08-20,2026-08-19,Electronics,22000.00,Like New,true
+115,Acoustic Guitar - Yamaha F310,"Full-size acoustic guitar, great for beginners.",350.00,9,2025-08-01,2026-07-31,Musical Instruments,10000.00,Good,true
