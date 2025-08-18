@@ -31,6 +31,19 @@ export default function ProductsPage() {
     fetchProducts();
   }, []);
 
+  // Helper to get a valid image URL or fallback
+  function getProductImage(product: Product) {
+    if (
+      product.images &&
+      product.images.length > 0 &&
+      typeof product.images[0].image_url === "string" &&
+      product.images[0].image_url.startsWith("http")
+    ) {
+      return product.images[0].image_url;
+    }
+    return "https://placehold.co/400x250?text=No+Image";
+  }
+
   return (
     <div className="container mx-auto py-10 px-6 min-h-screen">
       <h1 className="text-4xl font-bold font-serif text-jet mb-8">
@@ -74,11 +87,7 @@ export default function ProductsPage() {
                   <Card className="overflow-hidden group">
                     <div className="overflow-hidden">
                       <Image
-                        src={
-                          product.images && product.images.length > 0
-                            ? product.images[0].image_url
-                            : "https://placehold.co/400x250?text=No+Image"
-                        }
+                        src={getProductImage(product)}
                         alt={product.name}
                         width={400}
                         height={250}

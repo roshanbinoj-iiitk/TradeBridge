@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
   const productData = JSON.parse(formData.get("product") as string);
   const images = formData.getAll("images") as File[];
 
-  const { data: product, error: prodErr } = await supabaseAdmin
+  const { data: product, error: prodErr } = await supabase
     .from("products")
     .insert({ ...productData, lender_id: user.id })
     .select()
@@ -77,20 +77,39 @@ export async function POST(req: NextRequest) {
 
   const imageRecords = [];
   for (const file of images) {
-    const { data: storageData, error: storageErr } = await supabaseAdmin.storage
+    if (!(file instanceof Blob)) continue;
+
+    const { data: storageData, error: storageErr } = await supabase.storage
       .from("product-images")
       .upload(`${product.product_id}/${file.name}`, file, { upsert: true });
 
-    if (storageErr) continue;
+    if (storageErr) {
+      return NextResponse.json({ error: storageErr.message }, { status: 500 });
+    }
 
-    const publicUrl = supabaseAdmin.storage
+    const { data: publicUrlData } = supabase.storage
       .from("product-images")
-      .getPublicUrl(storageData.path).data.publicUrl;
-    const { data: imgData } = await supabaseAdmin
+      .getPublicUrl(storageData.path);
+
+    if (!publicUrlData?.publicUrl) {
+      return NextResponse.json(
+        { error: "Failed to get public URL for image." },
+        { status: 500 }
+      );
+    }
+
+    const { data: imgData, error: imgErr } = await supabase
       .from("product_images")
-      .insert({ product_id: product.product_id, image_url: publicUrl })
+      .insert({
+        product_id: product.product_id,
+        image_url: publicUrlData.publicUrl,
+      })
       .select()
       .single();
+
+    if (imgErr) {
+      return NextResponse.json({ error: imgErr.message }, { status: 500 });
+    }
 
     if (imgData) imageRecords.push(imgData);
   }
