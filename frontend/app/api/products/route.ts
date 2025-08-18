@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/utils/supabase/admin";
+import { createClient, publicClient } from "@/utils/supabase/server";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -11,7 +11,9 @@ export async function GET(req: NextRequest) {
   const minPrice = searchParams.get("minPrice");
   const maxPrice = searchParams.get("maxPrice");
 
-  let query = supabaseAdmin
+  // Use a public client (no cookies) so anyone can fetch products
+  const supabase = publicClient;
+  let query = supabase
     .from("products")
     .select("*, images:product_images(*), lender:users(*)")
     .eq("availability", true);
@@ -39,7 +41,6 @@ export async function GET(req: NextRequest) {
 
 // NOTE: The POST route still uses the user-context client to respect user permissions.
 // This is important for security.
-import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 
 export async function POST(req: NextRequest) {
