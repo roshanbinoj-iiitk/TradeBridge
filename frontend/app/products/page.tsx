@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+
 import { useEffect, useState } from "react";
+import { createClient } from "@/utils/supabase/client";
 import type { Product } from "@/types/db";
 
 export default function ProductsPage() {
@@ -18,10 +20,13 @@ export default function ProductsPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/products");
-        if (!res.ok) throw new Error("Failed to fetch products");
-        const data = await res.json();
-        setProducts(data || []);
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("products")
+          .select("*, images:product_images(*), lender:users(*)")
+          .eq("availability", true);
+        if (error) throw new Error(error.message);
+        setProducts((data as Product[]) || []);
       } catch (err: any) {
         setError(err.message || "Unknown error");
       } finally {
