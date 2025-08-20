@@ -53,35 +53,66 @@ export default function SignupPage() {
       setError("Passwords do not match.");
       return;
     }
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+
     setLoading(true);
     try {
       const supabase = createClient();
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: {
-          data: {
-            name: form.name,
-            role: form.role,
+
+      // Step 1: Sign up with Supabase Auth
+      const { data: authData, error: signUpError } = await supabase.auth.signUp(
+        {
+          email: form.email,
+          password: form.password,
+          options: {
+            data: {
+              name: form.name,
+              role: form.role,
+            },
           },
-        },
-      });
+        }
+      );
+
       if (signUpError) {
         setError(signUpError.message || "Signup failed.");
-      } else {
-        setSuccess(
-          "Signup successful! Please check your email to verify your account."
-        );
-        setForm({
-          name: "",
-          email: "",
-          password: "",
-          confirmPassword: "",
-          role: "",
-        });
+        return;
       }
-    } catch (err) {
-      setError("An unexpected error occurred.");
+
+      // Step 2: Insert user data into your custom users table
+      if (authData.user) {
+        const { error: insertError } = await supabase.from("users").insert({
+          email: form.email,
+          role: form.role,
+          uuid: authData.user.id, // Link to auth user
+          name: form.name, // Add the user's name
+          // Note: password_hash is not needed since Supabase Auth handles passwords
+        });
+
+        if (insertError) {
+          console.error("Error inserting user data:", insertError);
+          setError(
+            "Account created but there was an issue saving profile data. Please contact support."
+          );
+          return;
+        }
+      }
+
+      setSuccess(
+        "Signup successful! Please check your email to verify your account before logging in."
+      );
+      setForm({
+        name: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        role: "",
+      });
+    } catch (err: any) {
+      console.error("Signup error:", err);
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
