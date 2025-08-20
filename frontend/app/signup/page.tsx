@@ -1,5 +1,6 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
+import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import { BackgroundBeams } from "@/components/aceternity/background-beams";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,77 @@ import {
 } from "@/components/ui/select";
 
 export default function SignupPage() {
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    role: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [e.target.id]: e.target.value });
+  };
+
+  const handleRoleChange = (value: string) => {
+    setForm({ ...form, role: value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    if (
+      !form.name ||
+      !form.email ||
+      !form.password ||
+      !form.confirmPassword ||
+      !form.role
+    ) {
+      setError("Please fill in all fields.");
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          data: {
+            name: form.name,
+            role: form.role,
+          },
+        },
+      });
+      if (signUpError) {
+        setError(signUpError.message || "Signup failed.");
+      } else {
+        setSuccess(
+          "Signup successful! Please check your email to verify your account."
+        );
+        setForm({
+          name: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+          role: "",
+        });
+      }
+    } catch (err) {
+      setError("An unexpected error occurred.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="w-full min-h-screen rounded-md bg-isabelline relative flex flex-col items-center justify-center antialiased mt-8 lg:mt-16">
       <div className="max-w-md w-full mx-auto rounded-none md:rounded-2xl p-4 md:p-8 shadow-input bg-white/50 backdrop-blur-sm border border-platinum z-10">
@@ -34,11 +106,17 @@ export default function SignupPage() {
           Create an account to start borrowing and lending in your community.
         </p>
 
-        <form className="my-8">
+        <form className="my-8" onSubmit={handleSubmit}>
           <div className="flex flex-col space-y-4">
             <div>
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" placeholder="Tyler Durden" type="text" />
+              <Input
+                id="name"
+                placeholder="Tyler Durden"
+                type="text"
+                value={form.name}
+                onChange={handleChange}
+              />
             </div>
             <div>
               <Label htmlFor="email">Email Address</Label>
@@ -46,11 +124,19 @@ export default function SignupPage() {
                 id="email"
                 placeholder="projectmayhem@fc.com"
                 type="email"
+                value={form.email}
+                onChange={handleChange}
               />
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
-              <Input id="password" placeholder="••••••••" type="password" />
+              <Input
+                id="password"
+                placeholder="••••••••"
+                type="password"
+                value={form.password}
+                onChange={handleChange}
+              />
             </div>
             <div>
               <Label htmlFor="confirmPassword">Confirm Password</Label>
@@ -58,11 +144,13 @@ export default function SignupPage() {
                 id="confirmPassword"
                 placeholder="••••••••"
                 type="password"
+                value={form.confirmPassword}
+                onChange={handleChange}
               />
             </div>
             <div>
               <Label htmlFor="role">I want to...</Label>
-              <Select>
+              <Select value={form.role} onValueChange={handleRoleChange}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
@@ -75,11 +163,17 @@ export default function SignupPage() {
             </div>
           </div>
 
+          {error && <p className="text-red-500 text-center mt-4">{error}</p>}
+          {success && (
+            <p className="text-green-600 text-center mt-4">{success}</p>
+          )}
+
           <Button
             className="bg-gradient-to-br relative group/btn from-jet to-taupe block w-full text-white rounded-md h-10 font-medium shadow-[0px_1px_0px_0px_var(--zinc-800)_inset,0px_-1px_0px_0px_var(--zinc-800)_inset] mt-8"
             type="submit"
+            disabled={loading}
           >
-            Sign up &rarr;
+            {loading ? "Signing up..." : "Sign up →"}
             <BottomGradient />
           </Button>
 
