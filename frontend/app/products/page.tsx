@@ -7,6 +7,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/shared/AuthContext";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import type { Product } from "@/types/db";
 
@@ -14,27 +16,37 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    async function fetchProducts() {
-      setLoading(true);
-      setError(null);
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("products")
-          .select("*, images:product_images(*), lender:users(*)")
-          .eq("availability", true);
-        if (error) throw new Error(error.message);
-        setProducts((data as Product[]) || []);
-      } catch (err: any) {
-        setError(err.message || "Unknown error");
-      } finally {
-        setLoading(false);
-      }
+    if (!authLoading && !user) {
+      router.push("/login");
     }
-    fetchProducts();
-  }, []);
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      const fetchProducts = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          const supabase = createClient();
+          const { data, error } = await supabase
+            .from("products")
+            .select("*, images:product_images(*), lender:users(*)")
+            .eq("availability", true);
+          if (error) throw new Error(error.message);
+          setProducts((data as Product[]) || []);
+        } catch (err: any) {
+          setError(err.message || "Unknown error");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchProducts();
+    }
+  }, [user, authLoading]);
 
   // Helper to get a valid image URL or fallback
   function getProductImage(product: Product) {
@@ -48,6 +60,9 @@ export default function ProductsPage() {
     }
     return "https://placehold.co/400x250?text=No+Image";
   }
+
+  if (authLoading || !user)
+    return <div className="text-center py-10 text-taupe">Loading...</div>;
 
   return (
     <div className="container mx-auto py-10 px-6 min-h-screen">
@@ -118,3 +133,4 @@ export default function ProductsPage() {
     </div>
   );
 }
+// ...existing code...

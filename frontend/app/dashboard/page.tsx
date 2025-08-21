@@ -1,9 +1,29 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/components/shared/AuthContext";
+import { useRouter } from "next/navigation";
+import { use, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlusCircle, Bell } from "lucide-react";
 
 export default function DashboardPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+  if (loading || !user)
+    return <div className="text-center py-10 text-taupe">Loading...</div>;
   return (
     <div className="container mx-auto py-10 px-6 min-h-screen">
       <h1 className="text-4xl font-bold font-serif text-jet mb-8">Dashboard</h1>
@@ -47,13 +67,21 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Borrowing Activity</CardTitle>
-                  <CardDescription>Overview of your current and pending rentals.</CardDescription>
+                  <CardDescription>
+                    Overview of your current and pending rentals.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <h3 className="font-semibold text-jet">Active Rentals (1)</h3>
-                  <p className="text-taupe">You are currently renting a Canon EOS R5.</p>
-                  <h3 className="font-semibold text-jet mt-4">Pending Requests (1)</h3>
-                  <p className="text-taupe">Your request for a DJI Mavic Drone is pending approval.</p>
+                  <p className="text-taupe">
+                    You are currently renting a Canon EOS R5.
+                  </p>
+                  <h3 className="font-semibold text-jet mt-4">
+                    Pending Requests (1)
+                  </h3>
+                  <p className="text-taupe">
+                    Your request for a DJI Mavic Drone is pending approval.
+                  </p>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -61,13 +89,22 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Lending Activity</CardTitle>
-                  <CardDescription>Overview of your listed items and incoming requests.</CardDescription>
+                  <CardDescription>
+                    Overview of your listed items and incoming requests.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <h3 className="font-semibold text-jet">Active Rentals (2)</h3>
-                  <p className="text-taupe">Your Projector and Camping Tent are currently rented out.</p>
-                  <h3 className="font-semibold text-jet mt-4">Pending Requests (2)</h3>
-                  <p className="text-taupe">You have new requests for your Power Drill and Mountain Bike.</p>
+                  <p className="text-taupe">
+                    Your Projector and Camping Tent are currently rented out.
+                  </p>
+                  <h3 className="font-semibold text-jet mt-4">
+                    Pending Requests (2)
+                  </h3>
+                  <p className="text-taupe">
+                    You have new requests for your Power Drill and Mountain
+                    Bike.
+                  </p>
                 </CardContent>
               </Card>
             </TabsContent>

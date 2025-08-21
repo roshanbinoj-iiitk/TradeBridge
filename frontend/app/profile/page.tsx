@@ -66,7 +66,7 @@ export default function ProfilePage() {
   if (!profile) return null;
 
   return (
-    <div className="container mx-auto py-10 px-6 min-h-screen max-w-3xl">
+    <div className="container mx-auto py-10 px-6 min-h-screen max-w-3xl mt-16">
       <h1 className="text-4xl font-bold font-serif text-jet mb-8">
         My Profile
       </h1>
