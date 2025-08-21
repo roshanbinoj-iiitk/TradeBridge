@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Star } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import ProfileSkeleton from "./ProfileSkeleton";
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null);
@@ -60,7 +62,7 @@ export default function ProfilePage() {
     else setSuccess("Profile updated!");
   };
 
-  if (loading) return <div className="text-center mt-16">Loading...</div>;
+  if (loading) return <ProfileSkeleton />;
   if (error)
     return <div className="text-center text-red-500 mt-16">{error}</div>;
   if (!profile) return null;

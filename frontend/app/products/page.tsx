@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import Image from "next/image";
@@ -62,7 +63,23 @@ export default function ProductsPage() {
   }
 
   if (authLoading || !user)
-    return <div className="text-center py-10 text-taupe">Loading...</div>;
+    return (
+      <div className="container mx-auto py-10 px-6 min-h-screen">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <aside className="lg:col-span-1">
+            <Skeleton className="h-8 w-1/2 mb-4" />
+            <Skeleton className="h-32 w-full mb-4" />
+          </aside>
+          <main className="lg:col-span-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-80 w-full" />
+              ))}
+            </div>
+          </main>
+        </div>
+      </div>
+    );
 
   return (
     <div className="container mx-auto py-10 px-6 min-h-screen">
