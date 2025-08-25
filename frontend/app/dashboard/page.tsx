@@ -27,7 +27,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
-import { Transaction, Product, Profile } from "@/types/db";
+import { Booking, Product, User } from "@/types/db";
 import { updateTransactionStatus } from "@/lib/transactions";
 import { useToast } from "@/hooks/use-toast";
 import DashboardSkeleton from "@/components/ui/DashboardSkeleton";
@@ -48,8 +48,8 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<string>(initialTab);
   const { toast } = useToast();
   const [dashboardData, setDashboardData] = useState<{
-    borrowingTransactions: Transaction[];
-    lendingTransactions: Transaction[];
+    borrowingTransactions: Booking[];
+    lendingTransactions: Booking[];
     myProducts: Product[];
     stats: DashboardStats;
   }>({
@@ -72,26 +72,26 @@ export default function DashboardPage() {
     const supabase = createClient();
 
     try {
-      // Fetch borrowing transactions
-      const { data: borrowingTransactions } = await supabase
-        .from("transactions")
+      // Fetch borrowing bookings (updated to use bookings table)
+      const { data: borrowingBookings } = await supabase
+        .from("bookings")
         .select(
           `
           *,
           product:products(*),
-          lender:users!transactions_lender_id_fkey(*)
+          lender:users!bookings_lender_id_fkey(*)
         `
         )
         .eq("borrower_id", user.id);
 
-      // Fetch lending transactions
-      const { data: lendingTransactions } = await supabase
-        .from("transactions")
+      // Fetch lending bookings (updated to use bookings table)
+      const { data: lendingBookings } = await supabase
+        .from("bookings")
         .select(
           `
           *,
           product:products(*),
-          borrower:users!transactions_borrower_id_fkey(*)
+          borrower:users!bookings_borrower_id_fkey(*)
         `
         )
         .eq("lender_id", user.id);
@@ -102,36 +102,28 @@ export default function DashboardPage() {
         .select("*")
         .eq("lender_id", user.id);
 
-      // Calculate stats
+      // Calculate stats based on bookings
       const activeBorrowings =
-        borrowingTransactions?.filter((t) => t.status === "approved").length ||
+        borrowingBookings?.filter((b) => b.status === "active" || b.status === "confirmed").length ||
         0;
 
       const activeLendings =
-        lendingTransactions?.filter((t) => t.status === "approved").length || 0;
+        lendingBookings?.filter((b) => b.status === "active" || b.status === "confirmed").length || 0;
 
       const pendingRequests =
-        lendingTransactions?.filter((t) => t.status === "pending").length || 0;
+        lendingBookings?.filter((b) => b.status === "pending").length || 0;
 
       const totalEarnings =
-        lendingTransactions?.reduce((sum, t) => {
-          if (t.status === "completed" && t.product?.price) {
-            const days =
-              t.start_date && t.end_date
-                ? Math.ceil(
-                    (new Date(t.end_date).getTime() -
-                      new Date(t.start_date).getTime()) /
-                      (1000 * 60 * 60 * 24)
-                  )
-                : 1;
-            return sum + t.product.price * days;
+        lendingBookings?.reduce((sum, booking) => {
+          if (booking.status === "completed") {
+            return sum + (booking.total_amount || 0);
           }
           return sum;
         }, 0) || 0;
 
       setDashboardData({
-        borrowingTransactions: borrowingTransactions || [],
-        lendingTransactions: lendingTransactions || [],
+        borrowingTransactions: borrowingBookings || [], // Using bookings instead of transactions
+        lendingTransactions: lendingBookings || [], // Using bookings instead of transactions
         myProducts: myProducts || [],
         stats: {
           activeBorrowings,
@@ -166,22 +158,29 @@ export default function DashboardPage() {
     if (tab !== activeTab) setActiveTab(tab);
   }, [searchParams, activeTab]);
 
-  const handleTransactionAction = async (
-    transactionId: number,
-    action: "approved" | "rejected"
+  const handleBookingAction = async (
+    bookingId: number,
+    action: "confirmed" | "cancelled"
   ) => {
     try {
-      await updateTransactionStatus(transactionId, action);
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("bookings")
+        .update({ status: action })
+        .eq("booking_id", bookingId);
+
+      if (error) throw error;
+
       toast({
         title: "Success",
-        description: `Transaction ${action} successfully.`,
+        description: `Booking ${action} successfully.`,
       });
       // Refresh dashboard data
       fetchDashboardData();
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to update transaction status.",
+        description: "Failed to update booking status.",
         variant: "destructive",
       });
     }
@@ -190,9 +189,14 @@ export default function DashboardPage() {
   const getStatusBadge = (status: string) => {
     const variants = {
       pending: "bg-yellow-100 text-yellow-800",
+      confirmed: "bg-blue-100 text-blue-800",
       approved: "bg-green-100 text-green-800",
+      active: "bg-green-100 text-green-800",
+      cancelled: "bg-red-100 text-red-800",
       rejected: "bg-red-100 text-red-800",
       completed: "bg-blue-100 text-blue-800",
+      paid: "bg-green-100 text-green-800",
+      disputed: "bg-orange-100 text-orange-800",
     };
 
     return (
@@ -425,7 +429,7 @@ export default function DashboardPage() {
                         .slice(0, 5)
                         .map((transaction) => (
                           <div
-                            key={transaction.transaction_id}
+                            key={transaction.booking_id}
                             className="border rounded-lg p-4"
                           >
                             <div className="flex justify-between items-start mb-2">
@@ -463,7 +467,7 @@ export default function DashboardPage() {
                               <div className="flex items-center">
                                 <DollarSign className="h-4 w-4 mr-1" />
                                 <span>
-                                  ${transaction.product?.price || 0}/day
+                                  ${transaction.total_amount || 0} total
                                 </span>
                               </div>
                             </div>
@@ -546,7 +550,7 @@ export default function DashboardPage() {
                         .slice(0, 5)
                         .map((transaction) => (
                           <div
-                            key={transaction.transaction_id}
+                            key={transaction.booking_id}
                             className="border rounded-lg p-4"
                           >
                             <div className="flex justify-between items-start mb-2">
@@ -585,7 +589,7 @@ export default function DashboardPage() {
                                 <div className="flex items-center">
                                   <DollarSign className="h-4 w-4 mr-1" />
                                   <span>
-                                    ${transaction.product?.price || 0}/day
+                                    ${transaction.total_amount || 0} total
                                   </span>
                                 </div>
                               </div>
@@ -596,9 +600,9 @@ export default function DashboardPage() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() =>
-                                      handleTransactionAction(
-                                        transaction.transaction_id,
-                                        "approved"
+                                      handleBookingAction(
+                                        transaction.booking_id,
+                                        "confirmed"
                                       )
                                     }
                                   >
@@ -609,9 +613,9 @@ export default function DashboardPage() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() =>
-                                      handleTransactionAction(
-                                        transaction.transaction_id,
-                                        "rejected"
+                                      handleBookingAction(
+                                        transaction.booking_id,
+                                        "cancelled"
                                       )
                                     }
                                   >

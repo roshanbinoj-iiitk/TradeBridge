@@ -21,13 +21,31 @@ export async function updateTransactionStatus(
 
 export async function createRentalRequest(
   productId: number,
-  borrowerId: string,
+  borrowerAuthId: string,
   startDate: string,
   endDate: string
 ) {
   const supabase = createClient();
 
-  // First get the product to find the lender
+  // Get the current authenticated user
+  const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+  
+  if (authError || !authUser) {
+    throw new Error("Authentication required");
+  }
+
+  // Get the borrower's profile using their auth UUID
+  const { data: borrowerUser } = await supabase
+    .from("users")
+    .select("uuid")
+    .eq("uuid", authUser.id)
+    .single();
+
+  if (!borrowerUser) {
+    throw new Error("User profile not found. Please complete your profile first.");
+  }
+
+  // Get the product to find the lender
   const { data: product } = await supabase
     .from("products")
     .select("lender_id")
@@ -38,15 +56,41 @@ export async function createRentalRequest(
     throw new Error("Product not found");
   }
 
+  // Check if the product is available for the requested dates using bookings table
+  const { data: existingBookings } = await supabase
+    .from("bookings")
+    .select("start_date, end_date")
+    .eq("product_id", productId)
+    .in("status", ["pending", "confirmed", "paid", "active"])
+    .gte("end_date", startDate)
+    .lte("start_date", endDate);
+
+  if (existingBookings && existingBookings.length > 0) {
+    throw new Error("Product is not available for the selected dates");
+  }
+
+  // Calculate total amount (you may want to add security deposit later)
+  const { data: productData } = await supabase
+    .from("products")
+    .select("price")
+    .eq("product_id", productId)
+    .single();
+
+  const days = Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24));
+  const totalAmount = days * (productData?.price || 0);
+
+  // Create a booking instead of transaction for better workflow
   const { data, error } = await supabase
-    .from("transactions")
+    .from("bookings")
     .insert({
       product_id: productId,
-      borrower_id: borrowerId,
+      borrower_id: borrowerUser.uuid,
       lender_id: product.lender_id,
       start_date: startDate,
       end_date: endDate,
+      total_amount: totalAmount,
       status: "pending",
+      pickup_method: "meetup", // Default value
     })
     .select();
 
@@ -54,7 +98,44 @@ export async function createRentalRequest(
     throw new Error(`Failed to create rental request: ${error.message}`);
   }
 
+  // Also create a notification for the lender
+  await createNotification(
+    product.lender_id,
+    "booking_request",
+    "New Rental Request",
+    `Someone wants to rent your item for ${days} days`,
+    {
+      booking_id: data[0]?.booking_id,
+      product_id: productId,
+      borrower_id: borrowerUser.uuid,
+    }
+  );
+
   return data;
+}
+
+export async function createNotification(
+  userId: string,
+  type: string,
+  title: string,
+  message: string,
+  data?: any
+) {
+  const supabase = createClient();
+
+  const { error } = await supabase
+    .from("notifications")
+    .insert({
+      user_id: userId,
+      notification_type: type,
+      title,
+      message,
+      data,
+    });
+
+  if (error) {
+    console.warn("Failed to create notification:", error);
+  }
 }
 
 export async function createProduct(productData: {
@@ -81,8 +162,10 @@ export async function createProduct(productData: {
       category: productData.category,
       condition: productData.condition,
       price: productData.price,
+      price_per_day: productData.price, // Set both fields
       value: productData.value,
       availability: productData.availability,
+      available_status: productData.availability,
       start_date: productData.start_date,
       end_date: productData.end_date,
       lender_id: productData.lender_id,

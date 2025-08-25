@@ -81,7 +81,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
               {product.value || "N/A"}
             </p>
           </div>
-          <RentalCard price={product.price} />
+          <RentalCard price={product.price} productId={product.product_id} />
         </div>
       </div>
     </div>

@@ -21,6 +21,7 @@ export default function Navbar() {
 
   const navItems = [
     { name: "Browse Products", link: "/products" },
+    { name: "Community", link: "/social" },
     { name: "How It Works", link: "/#how-it-works" },
   ];
 
@@ -75,6 +76,9 @@ export default function Navbar() {
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/profile">Profile</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/messages">Messages</Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/borrower">My Rentals</Link>
