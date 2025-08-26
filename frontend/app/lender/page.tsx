@@ -378,10 +378,9 @@ export default function LenderPage() {
                     <Button
                       variant="secondary"
                       className="w-full"
-                      onClick={() => {
-                        // TODO: Implement edit functionality
-                        console.log("Edit product:", product.product_id);
-                      }}
+                      onClick={() =>
+                        router.push(`/products/${product.product_id}/edit`)
+                      }
                     >
                       Edit
                     </Button>

@@ -63,15 +63,17 @@ export async function middleware(request: NextRequest) {
     "/dashboard",
     "/profile",
     "/products/new",
+    "/products/[id]/edit",
     "/messages",
     "/borrower",
     "/lender",
   ];
   const authRoutes = ["/login", "/signup"];
 
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    request.nextUrl.pathname.startsWith(route)
-  );
+  const isProtectedRoute =
+    protectedRoutes.some((route) =>
+      request.nextUrl.pathname.startsWith(route)
+    ) || request.nextUrl.pathname.match(/^\/products\/\d+\/edit$/);
   const isAuthRoute = authRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );
