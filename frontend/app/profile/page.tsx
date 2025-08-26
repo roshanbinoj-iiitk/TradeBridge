@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useAuthRedirect } from "@/hooks/use-auth-redirect";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ProfileSkeleton from "./ProfileSkeleton";
 
 export default function ProfilePage() {
+  const { user, loading: authLoading, isAuthenticated } = useAuthRedirect();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -24,29 +26,23 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      setLoading(true);
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setError("Not logged in");
+    if (user) {
+      const fetchProfile = async () => {
+        setLoading(true);
+        const supabase = createClient();
+        // Fetch from your users table using uuid
+        const { data, error } = await supabase
+          .from("users")
+          .select("*")
+          .eq("uuid", user.id)
+          .single();
+        if (error) setError(error.message);
+        else setProfile(data);
         setLoading(false);
-        return;
-      }
-      // Fetch from your users table using uuid
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("uuid", user.id)
-        .single();
-      if (error) setError(error.message);
-      else setProfile(data);
-      setLoading(false);
-    };
-    fetchProfile();
-  }, []);
+      };
+      fetchProfile();
+    }
+  }, [user]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -62,7 +58,13 @@ export default function ProfilePage() {
     else setSuccess("Profile updated!");
   };
 
-  if (loading) return <ProfileSkeleton />;
+  if (authLoading || loading) return <ProfileSkeleton />;
+  if (error && !user)
+    return (
+      <div className="text-center text-red-500 mt-16">
+        Please log in to view your profile
+      </div>
+    );
   if (error)
     return <div className="text-center text-red-500 mt-16">{error}</div>;
   if (!profile) return null;

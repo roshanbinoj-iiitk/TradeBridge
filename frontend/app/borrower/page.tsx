@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/components/shared/AuthContext";
+import { useAuthRedirect } from "@/hooks/use-auth-redirect";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -18,32 +18,20 @@ import { createClient } from "@/utils/supabase/client";
 import { Transaction } from "@/types/db";
 
 export default function BorrowerPage() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading, isAuthenticated } = useAuthRedirect();
   const router = useRouter();
   const [rentals, setRentals] = useState<Transaction[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    if (user) {
-      fetchBorrowerRentals();
-    }
-  }, [user]);
-
-  const fetchBorrowerRentals = async () => {
+  const fetchBorrowerRentalsData = async () => {
     try {
       setDataLoading(true);
       setError(null);
       const supabase = createClient();
-      
+
       console.log("Fetching rentals for user:", user?.id);
-      
+
       // First, get the transactions for this borrower
       const { data: transactions, error: transactionError } = await supabase
         .from("transactions")
@@ -65,10 +53,10 @@ export default function BorrowerPage() {
       }
 
       // Get all unique product IDs
-      const productIds = transactions.map(t => t.product_id);
-      
+      const productIds = transactions.map((t) => t.product_id);
+
       // Get all unique lender IDs
-      const lenderIds = transactions.map(t => t.lender_id);
+      const lenderIds = transactions.map((t) => t.lender_id);
 
       // Fetch products
       const { data: products, error: productError } = await supabase
@@ -101,24 +89,30 @@ export default function BorrowerPage() {
       }
 
       // Combine the data
-      const enrichedRentals = transactions.map(transaction => {
-        const product = products?.find(p => p.product_id === transaction.product_id);
-        const lender = lenders?.find(l => l.uuid === transaction.lender_id);
-        const images = productImages?.filter(img => img.product_id === transaction.product_id) || [];
+      const enrichedRentals = transactions.map((transaction) => {
+        const product = products?.find(
+          (p) => p.product_id === transaction.product_id
+        );
+        const lender = lenders?.find((l) => l.uuid === transaction.lender_id);
+        const images =
+          productImages?.filter(
+            (img) => img.product_id === transaction.product_id
+          ) || [];
 
         return {
           ...transaction,
-          product: product ? {
-            ...product,
-            lender,
-            images
-          } : null
+          product: product
+            ? {
+                ...product,
+                lender,
+                images,
+              }
+            : null,
         };
       });
 
       console.log("Enriched rentals:", enrichedRentals);
       setRentals(enrichedRentals || []);
-
     } catch (error) {
       console.error("Error:", error);
       setError("Failed to load rental data. Please try again.");
@@ -127,18 +121,29 @@ export default function BorrowerPage() {
     }
   };
 
-  if (loading || !user)
+  useEffect(() => {
+    if (user) {
+      fetchBorrowerRentalsData();
+    }
+  }, [user]);
+
+  if (authLoading || !user)
     return <div className="text-center py-10 text-taupe">Loading...</div>;
 
   if (dataLoading)
-    return <div className="text-center py-10 text-taupe">Loading rentals...</div>;
+    return (
+      <div className="text-center py-10 text-taupe">Loading rentals...</div>
+    );
 
   if (error) {
     return (
       <div className="container mx-auto py-10 px-6 min-h-screen">
         <div className="text-center">
           <p className="text-red-500 mb-4">{error}</p>
-          <Button onClick={fetchBorrowerRentals} className="bg-jet text-isabelline hover:bg-taupe">
+          <Button
+            onClick={() => fetchBorrowerRentalsData()}
+            className="bg-jet text-isabelline hover:bg-taupe"
+          >
             Retry
           </Button>
         </div>
@@ -146,15 +151,20 @@ export default function BorrowerPage() {
     );
   }
   const currentRentals = rentals.filter(
-    (rental) => rental.status === "approved" && new Date(rental.end_date || "") >= new Date()
+    (rental) =>
+      rental.status === "approved" &&
+      new Date(rental.end_date || "") >= new Date()
   );
-  
+
   const pendingRequests = rentals.filter(
     (rental) => rental.status === "pending"
   );
-  
+
   const rentalHistory = rentals.filter(
-    (rental) => rental.status === "completed" || (rental.status === "approved" && new Date(rental.end_date || "") < new Date())
+    (rental) =>
+      rental.status === "completed" ||
+      (rental.status === "approved" &&
+        new Date(rental.end_date || "") < new Date())
   );
 
   const getStatusBadge = (status: string) => {
@@ -164,7 +174,10 @@ export default function BorrowerPage() {
       rejected: "bg-red-500 text-white",
       completed: "bg-blue-500 text-white",
     };
-    return statusColors[status as keyof typeof statusColors] || "bg-gray-500 text-white";
+    return (
+      statusColors[status as keyof typeof statusColors] ||
+      "bg-gray-500 text-white"
+    );
   };
 
   const formatDate = (dateString: string | undefined) => {
@@ -214,9 +227,15 @@ export default function BorrowerPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-taupe">Start: {formatDate(rental.start_date)}</p>
-          <p className="text-sm text-taupe">End: {formatDate(rental.end_date)}</p>
-          <p className="text-sm text-jet font-medium">Daily Rate: ₹{rental.product?.price}</p>
+          <p className="text-sm text-taupe">
+            Start: {formatDate(rental.start_date)}
+          </p>
+          <p className="text-sm text-taupe">
+            End: {formatDate(rental.end_date)}
+          </p>
+          <p className="text-sm text-jet font-medium">
+            Daily Rate: ₹{rental.product?.price}
+          </p>
         </CardContent>
         <CardFooter>
           <Button className="w-full bg-jet text-isabelline hover:bg-taupe">
@@ -230,12 +249,10 @@ export default function BorrowerPage() {
   return (
     <div className="container mx-auto py-10 px-6 min-h-screen">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold font-serif text-jet">
-          My Rentals
-        </h1>
-        <Button 
-          onClick={fetchBorrowerRentals} 
-          variant="outline" 
+        <h1 className="text-4xl font-bold font-serif text-jet">My Rentals</h1>
+        <Button
+          onClick={() => fetchBorrowerRentalsData()}
+          variant="outline"
           className="border-jet text-jet hover:bg-jet hover:text-isabelline"
         >
           Refresh

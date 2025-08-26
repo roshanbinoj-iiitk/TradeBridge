@@ -5,31 +5,43 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Toggle } from "@/components/ui/toggle";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { 
-  Search, 
-  Filter, 
-  Star, 
-  MapPin, 
-  Calendar, 
-  Heart, 
-  Eye, 
-  Grid3X3, 
-  List, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Search,
+  Filter,
+  Star,
+  MapPin,
+  Calendar,
+  Heart,
+  Eye,
+  Grid3X3,
+  List,
   Clock,
   TrendingUp,
   Shield,
   Users,
-  MessageCircle
+  MessageCircle,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
 import { useEffect, useState, useMemo } from "react";
-import { useAuth } from "@/components/shared/AuthContext";
+import { useAuthRedirect } from "@/hooks/use-auth-redirect";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { sendMessage } from "@/lib/messages";
@@ -39,7 +51,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Filter states
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -47,14 +59,14 @@ export default function ProductsPage() {
   const [priceRange, setPriceRange] = useState<number[]>([0, 1000]);
   const [sortBy, setSortBy] = useState<string>("name");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  
+
   // New feature states
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showTrending, setShowTrending] = useState(false);
-  
-  const { user, loading: authLoading } = useAuth();
+
+  const { user, loading: authLoading, isAuthenticated } = useAuthRedirect();
   const router = useRouter();
 
   // Predefined categories for better UX
@@ -69,7 +81,7 @@ export default function ProductsPage() {
     { value: "home", label: "Home & Garden" },
     { value: "books", label: "Books & Media" },
     { value: "fashion", label: "Fashion & Accessories" },
-    { value: "other", label: "Other" }
+    { value: "other", label: "Other" },
   ];
 
   const conditions = [
@@ -78,7 +90,7 @@ export default function ProductsPage() {
     { value: "like new", label: "Like New" },
     { value: "good", label: "Good" },
     { value: "fair", label: "Fair" },
-    { value: "poor", label: "Poor" }
+    { value: "poor", label: "Poor" },
   ];
 
   const sortOptions = [
@@ -88,14 +100,14 @@ export default function ProductsPage() {
     { value: "price_desc", label: "Price (High to Low)" },
     { value: "newest", label: "Newest First" },
     { value: "popular", label: "Most Popular" },
-    { value: "rating", label: "Highest Rated" }
+    { value: "rating", label: "Highest Rated" },
   ];
 
   // New feature functions
   const toggleFavorite = (productId: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setFavorites(prev => {
+    setFavorites((prev) => {
       const newFavorites = new Set(prev);
       if (newFavorites.has(productId)) {
         newFavorites.delete(productId);
@@ -103,16 +115,19 @@ export default function ProductsPage() {
         newFavorites.add(productId);
       }
       // Save to localStorage
-      localStorage.setItem('favorites', JSON.stringify(Array.from(newFavorites)));
+      localStorage.setItem(
+        "favorites",
+        JSON.stringify(Array.from(newFavorites))
+      );
       return newFavorites;
     });
   };
 
   const addToRecentlyViewed = (product: Product) => {
-    setRecentlyViewed(prev => {
-      const filtered = prev.filter(p => p.product_id !== product.product_id);
+    setRecentlyViewed((prev) => {
+      const filtered = prev.filter((p) => p.product_id !== product.product_id);
       const newRecent = [product, ...filtered].slice(0, 5);
-      localStorage.setItem('recentlyViewed', JSON.stringify(newRecent));
+      localStorage.setItem("recentlyViewed", JSON.stringify(newRecent));
       return newRecent;
     });
   };
@@ -120,9 +135,9 @@ export default function ProductsPage() {
   const handleMessageLender = async (product: Product, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!user || !product.lender_id) return;
-    
+
     try {
       // Send initial message about interest in the product
       await sendMessage(
@@ -131,20 +146,20 @@ export default function ProductsPage() {
         `Hi! I'm interested in renting your ${product.name}. Is it still available?`,
         product.product_id
       );
-      
+
       // Redirect to messages page
-      router.push('/messages');
+      router.push("/messages");
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error("Error sending message:", error);
       // Could show a toast notification here
     }
   };
 
   // Load saved data from localStorage
   useEffect(() => {
-    const savedFavorites = localStorage.getItem('favorites');
-    const savedRecentlyViewed = localStorage.getItem('recentlyViewed');
-    
+    const savedFavorites = localStorage.getItem("favorites");
+    const savedRecentlyViewed = localStorage.getItem("recentlyViewed");
+
     if (savedFavorites) {
       setFavorites(new Set(JSON.parse(savedFavorites)));
     }
@@ -152,12 +167,6 @@ export default function ProductsPage() {
       setRecentlyViewed(JSON.parse(savedRecentlyViewed));
     }
   }, []);
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/login");
-    }
-  }, [user, authLoading, router]);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -168,24 +177,26 @@ export default function ProductsPage() {
           const supabase = createClient();
           const { data, error } = await supabase
             .from("products")
-            .select(`
+            .select(
+              `
               *,
               images:product_images(*),
               lender:users(*)
-            `)
+            `
+            )
             .eq("availability", true)
             .order("name");
-            
+
           if (error) throw new Error(error.message);
-          
+
           // Set initial price range based on actual data
           if (data && data.length > 0) {
-            const prices = data.map(p => p.price);
+            const prices = data.map((p) => p.price);
             const minPrice = Math.floor(Math.min(...prices));
             const maxPrice = Math.ceil(Math.max(...prices));
             setPriceRange([minPrice, maxPrice]);
           }
-          
+
           setProducts((data as Product[]) || []);
         } catch (err: any) {
           setError(err.message || "Unknown error");
@@ -199,24 +210,33 @@ export default function ProductsPage() {
 
   // Filtered and sorted products
   const filteredProducts = useMemo(() => {
-    let filtered = products.filter(product => {
+    let filtered = products.filter((product) => {
       // Search filter
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
-      
+      const matchesSearch =
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.description
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ??
+          false);
+
       // Category filter
-      const matchesCategory = selectedCategory === "all" || 
-                             (product.category?.toLowerCase() === selectedCategory) ||
-                             (selectedCategory === "other" && !product.category);
-      
+      const matchesCategory =
+        selectedCategory === "all" ||
+        product.category?.toLowerCase() === selectedCategory ||
+        (selectedCategory === "other" && !product.category);
+
       // Condition filter
-      const matchesCondition = selectedCondition === "all" || 
-                              (product.condition?.toLowerCase() === selectedCondition);
-      
+      const matchesCondition =
+        selectedCondition === "all" ||
+        product.condition?.toLowerCase() === selectedCondition;
+
       // Price filter
-      const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
-      
-      return matchesSearch && matchesCategory && matchesCondition && matchesPrice;
+      const matchesPrice =
+        product.price >= priceRange[0] && product.price <= priceRange[1];
+
+      return (
+        matchesSearch && matchesCategory && matchesCondition && matchesPrice
+      );
     });
 
     // Sort products
@@ -231,14 +251,24 @@ export default function ProductsPage() {
         case "price_desc":
           return b.price - a.price;
         case "newest":
-          return new Date(b.start_date || 0).getTime() - new Date(a.start_date || 0).getTime();
+          return (
+            new Date(b.start_date || 0).getTime() -
+            new Date(a.start_date || 0).getTime()
+          );
         default:
           return 0;
       }
     });
 
     return filtered;
-  }, [products, searchTerm, selectedCategory, selectedCondition, priceRange, sortBy]);
+  }, [
+    products,
+    searchTerm,
+    selectedCategory,
+    selectedCondition,
+    priceRange,
+    sortBy,
+  ]);
 
   const clearFilters = () => {
     setSearchTerm("");
@@ -246,8 +276,11 @@ export default function ProductsPage() {
     setSelectedCondition("all");
     setSortBy("name");
     if (products.length > 0) {
-      const prices = products.map(p => p.price);
-      setPriceRange([Math.floor(Math.min(...prices)), Math.ceil(Math.max(...prices))]);
+      const prices = products.map((p) => p.price);
+      setPriceRange([
+        Math.floor(Math.min(...prices)),
+        Math.ceil(Math.max(...prices)),
+      ]);
     }
   };
 
@@ -271,7 +304,9 @@ export default function ProductsPage() {
 
   const getCategoryLabel = (category: string | undefined) => {
     if (!category) return "Other";
-    const found = categories.find(cat => cat.value === category.toLowerCase());
+    const found = categories.find(
+      (cat) => cat.value === category.toLowerCase()
+    );
     return found ? found.label : category;
   };
 
@@ -346,7 +381,9 @@ export default function ProductsPage() {
                     className="w-full h-24 object-cover"
                   />
                   <CardContent className="p-3">
-                    <h4 className="font-medium text-sm line-clamp-1">{product.name}</h4>
+                    <h4 className="font-medium text-sm line-clamp-1">
+                      {product.name}
+                    </h4>
                     <p className="text-xs text-taupe">₹{product.price}/day</p>
                   </CardContent>
                 </Card>
@@ -362,8 +399,8 @@ export default function ProductsPage() {
           <div className="sticky top-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold text-jet">Filters</h2>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={clearFilters}
                 className="text-xs"
@@ -372,13 +409,13 @@ export default function ProductsPage() {
                 Clear
               </Button>
             </div>
-            
+
             <div className="space-y-6">
               {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-battleship-gray" />
-                <Input 
-                  placeholder="Search products..." 
+                <Input
+                  placeholder="Search products..."
                   className="pl-10"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -387,8 +424,13 @@ export default function ProductsPage() {
 
               {/* Category Filter */}
               <div>
-                <label className="text-sm font-medium text-jet mb-2 block">Category</label>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <label className="text-sm font-medium text-jet mb-2 block">
+                  Category
+                </label>
+                <Select
+                  value={selectedCategory}
+                  onValueChange={setSelectedCategory}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -404,8 +446,13 @@ export default function ProductsPage() {
 
               {/* Condition Filter */}
               <div>
-                <label className="text-sm font-medium text-jet mb-2 block">Condition</label>
-                <Select value={selectedCondition} onValueChange={setSelectedCondition}>
+                <label className="text-sm font-medium text-jet mb-2 block">
+                  Condition
+                </label>
+                <Select
+                  value={selectedCondition}
+                  onValueChange={setSelectedCondition}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select condition" />
                   </SelectTrigger>
@@ -427,7 +474,11 @@ export default function ProductsPage() {
                 <Slider
                   value={priceRange}
                   onValueChange={setPriceRange}
-                  max={products.length > 0 ? Math.max(...products.map(p => p.price)) : 1000}
+                  max={
+                    products.length > 0
+                      ? Math.max(...products.map((p) => p.price))
+                      : 1000
+                  }
                   min={0}
                   step={10}
                   className="mt-2"
@@ -436,7 +487,9 @@ export default function ProductsPage() {
 
               {/* Show Favorites Toggle */}
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-jet">Show Favorites Only</label>
+                <label className="text-sm font-medium text-jet">
+                  Show Favorites Only
+                </label>
                 <Toggle
                   pressed={showTrending}
                   onPressedChange={setShowTrending}
@@ -448,7 +501,9 @@ export default function ProductsPage() {
 
               {/* Trending Products Toggle */}
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-jet">Trending Products</label>
+                <label className="text-sm font-medium text-jet">
+                  Trending Products
+                </label>
                 <Toggle
                   pressed={showTrending}
                   onPressedChange={setShowTrending}
@@ -460,7 +515,9 @@ export default function ProductsPage() {
 
               {/* Advanced Filters */}
               <div>
-                <label className="text-sm font-medium text-jet mb-2 block">Rating</label>
+                <label className="text-sm font-medium text-jet mb-2 block">
+                  Rating
+                </label>
                 <div className="space-y-2">
                   {[5, 4, 3, 2, 1].map((rating) => (
                     <div key={rating} className="flex items-center space-x-2">
@@ -469,7 +526,10 @@ export default function ProductsPage() {
                         id={`rating-${rating}`}
                         className="rounded"
                       />
-                      <label htmlFor={`rating-${rating}`} className="flex items-center text-sm">
+                      <label
+                        htmlFor={`rating-${rating}`}
+                        className="flex items-center text-sm"
+                      >
                         <div className="flex">
                           {[...Array(5)].map((_, i) => (
                             <Star
@@ -491,15 +551,30 @@ export default function ProductsPage() {
 
               {/* Availability Filter */}
               <div>
-                <label className="text-sm font-medium text-jet mb-2 block">Availability</label>
+                <label className="text-sm font-medium text-jet mb-2 block">
+                  Availability
+                </label>
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
-                    <input type="checkbox" id="available-now" className="rounded" />
-                    <label htmlFor="available-now" className="text-sm">Available Now</label>
+                    <input
+                      type="checkbox"
+                      id="available-now"
+                      className="rounded"
+                    />
+                    <label htmlFor="available-now" className="text-sm">
+                      Available Now
+                    </label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <input type="checkbox" id="verified-lender" className="rounded" />
-                    <label htmlFor="verified-lender" className="text-sm flex items-center">
+                    <input
+                      type="checkbox"
+                      id="verified-lender"
+                      className="rounded"
+                    />
+                    <label
+                      htmlFor="verified-lender"
+                      className="text-sm flex items-center"
+                    >
                       <Shield className="w-3 h-3 mr-1 text-green-500" />
                       Verified Lenders Only
                     </label>
@@ -509,7 +584,9 @@ export default function ProductsPage() {
 
               {/* Sort Options */}
               <div>
-                <label className="text-sm font-medium text-jet mb-2 block">Sort By</label>
+                <label className="text-sm font-medium text-jet mb-2 block">
+                  Sort By
+                </label>
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger>
                     <SelectValue placeholder="Sort by" />
@@ -537,29 +614,37 @@ export default function ProductsPage() {
             <div className="text-center py-10 text-red-500">{error}</div>
           ) : filteredProducts.length === 0 ? (
             <div className="text-center py-10">
-              <div className="text-taupe mb-4">No products match your filters.</div>
+              <div className="text-taupe mb-4">
+                No products match your filters.
+              </div>
               <Button onClick={clearFilters} variant="outline">
                 Clear Filters
               </Button>
             </div>
           ) : (
-            <div className={`grid gap-6 ${
-              viewMode === "grid" 
-                ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3" 
-                : "grid-cols-1"
-            }`}>
+            <div
+              className={`grid gap-6 ${
+                viewMode === "grid"
+                  ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+                  : "grid-cols-1"
+              }`}
+            >
               {filteredProducts.map((product) => (
                 <div key={product.product_id} className="relative">
                   <Link
                     href={`/products/${product.product_id}`}
                     onClick={() => addToRecentlyViewed(product)}
                   >
-                    <Card className={`overflow-hidden group hover:shadow-lg transition-all duration-300 ${
-                      viewMode === "list" ? "flex" : ""
-                    }`}>
-                      <div className={`relative overflow-hidden ${
-                        viewMode === "list" ? "w-48 flex-shrink-0" : ""
-                      }`}>
+                    <Card
+                      className={`overflow-hidden group hover:shadow-lg transition-all duration-300 ${
+                        viewMode === "list" ? "flex" : ""
+                      }`}
+                    >
+                      <div
+                        className={`relative overflow-hidden ${
+                          viewMode === "list" ? "w-48 flex-shrink-0" : ""
+                        }`}
+                      >
                         <Image
                           src={getProductImage(product)}
                           alt={product.name}
@@ -569,20 +654,18 @@ export default function ProductsPage() {
                             viewMode === "list" ? "w-48 h-32" : "w-full h-56"
                           }`}
                         />
-                        
+
                         {/* Category Badge */}
-                        <Badge 
+                        <Badge
                           className="absolute top-2 left-2 bg-white/90 text-jet hover:bg-white"
                           variant="secondary"
                         >
                           {getCategoryLabel(product.category)}
                         </Badge>
-                        
+
                         {/* Condition Badge */}
                         {product.condition && (
-                          <Badge 
-                            className="absolute top-2 right-2 bg-green-500 text-white"
-                          >
+                          <Badge className="absolute top-2 right-2 bg-green-500 text-white">
                             {product.condition}
                           </Badge>
                         )}
@@ -602,36 +685,54 @@ export default function ProductsPage() {
                         )}
                       </div>
 
-                      <CardContent className={`p-4 ${viewMode === "list" ? "flex-1" : ""}`}>
+                      <CardContent
+                        className={`p-4 ${viewMode === "list" ? "flex-1" : ""}`}
+                      >
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className={`font-semibold text-jet line-clamp-1 ${
-                            viewMode === "list" ? "text-base" : "text-lg"
-                          }`}>
+                          <h3
+                            className={`font-semibold text-jet line-clamp-1 ${
+                              viewMode === "list" ? "text-base" : "text-lg"
+                            }`}
+                          >
                             {product.name}
                           </h3>
                           <div className="flex items-center gap-1">
                             <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                            <span className="text-sm text-taupe">{(Math.random() * 2 + 3).toFixed(1)}</span>
-                            <span className="text-xs text-taupe">({Math.floor(Math.random() * 50) + 5})</span>
+                            <span className="text-sm text-taupe">
+                              {(Math.random() * 2 + 3).toFixed(1)}
+                            </span>
+                            <span className="text-xs text-taupe">
+                              ({Math.floor(Math.random() * 50) + 5})
+                            </span>
                           </div>
                         </div>
-                        
+
                         {product.description && (
-                          <p className={`text-sm text-taupe mb-3 ${
-                            viewMode === "list" ? "line-clamp-1" : "line-clamp-2"
-                          }`}>
+                          <p
+                            className={`text-sm text-taupe mb-3 ${
+                              viewMode === "list"
+                                ? "line-clamp-1"
+                                : "line-clamp-2"
+                            }`}
+                          >
                             {product.description}
                           </p>
                         )}
 
-                        <div className={`flex items-center ${
-                          viewMode === "list" ? "justify-between" : "justify-between"
-                        }`}>
+                        <div
+                          className={`flex items-center ${
+                            viewMode === "list"
+                              ? "justify-between"
+                              : "justify-between"
+                          }`}
+                        >
                           <div>
-                            <p className="text-lg font-bold text-jet">₹{product.price}</p>
+                            <p className="text-lg font-bold text-jet">
+                              ₹{product.price}
+                            </p>
                             <p className="text-xs text-taupe">per day</p>
                           </div>
-                          
+
                           <div className="text-right">
                             <div className="flex items-center gap-1 text-sm text-taupe mb-1">
                               <MapPin className="w-3 h-3" />
@@ -643,7 +744,12 @@ export default function ProductsPage() {
                             {product.start_date && (
                               <div className="flex items-center gap-1 text-xs text-taupe">
                                 <Calendar className="w-3 h-3" />
-                                <span>Available from {new Date(product.start_date).toLocaleDateString()}</span>
+                                <span>
+                                  Available from{" "}
+                                  {new Date(
+                                    product.start_date
+                                  ).toLocaleDateString()}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -652,24 +758,26 @@ export default function ProductsPage() {
                         <div className="mt-3 pt-3 border-t border-gray-100">
                           <div className="flex justify-between items-center">
                             <div className="flex gap-2">
-                              <Badge 
+                              <Badge
                                 className={`${
-                                  product.availability 
-                                    ? "bg-green-100 text-green-800" 
+                                  product.availability
+                                    ? "bg-green-100 text-green-800"
                                     : "bg-red-100 text-red-800"
                                 }`}
                                 variant="secondary"
                               >
-                                {product.availability ? "Available" : "Unavailable"}
+                                {product.availability
+                                  ? "Available"
+                                  : "Unavailable"}
                               </Badge>
-                              
+
                               {/* Social Proof */}
                               <Badge variant="outline" className="text-xs">
                                 <Users className="w-3 h-3 mr-1" />
                                 {Math.floor(Math.random() * 20) + 5} interested
                               </Badge>
                             </div>
-                            
+
                             {product.value && (
                               <span className="text-xs text-taupe">
                                 Value: ₹{product.value}
@@ -682,9 +790,9 @@ export default function ProductsPage() {
                         <div className="flex gap-2">
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 className="flex-1"
                                 onClick={(e) => {
                                   e.preventDefault();
@@ -696,7 +804,9 @@ export default function ProductsPage() {
                             </DialogTrigger>
                             <DialogContent className="max-w-2xl">
                               <DialogHeader>
-                                <DialogTitle>{selectedProduct?.name}</DialogTitle>
+                                <DialogTitle>
+                                  {selectedProduct?.name}
+                                </DialogTitle>
                               </DialogHeader>
                               {selectedProduct && (
                                 <div className="space-y-4">
@@ -710,11 +820,17 @@ export default function ProductsPage() {
                                   <p>{selectedProduct.description}</p>
                                   <div className="flex justify-between items-center">
                                     <div>
-                                      <p className="text-2xl font-bold">₹{selectedProduct.price}/day</p>
-                                      <p className="text-sm text-taupe">by {selectedProduct.lender?.name}</p>
+                                      <p className="text-2xl font-bold">
+                                        ₹{selectedProduct.price}/day
+                                      </p>
+                                      <p className="text-sm text-taupe">
+                                        by {selectedProduct.lender?.name}
+                                      </p>
                                     </div>
                                     <Button asChild>
-                                      <Link href={`/products/${selectedProduct.product_id}`}>
+                                      <Link
+                                        href={`/products/${selectedProduct.product_id}`}
+                                      >
                                         View Full Details
                                       </Link>
                                     </Button>
@@ -723,10 +839,10 @@ export default function ProductsPage() {
                               )}
                             </DialogContent>
                           </Dialog>
-                          
+
                           {/* Message Lender Button */}
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             className="bg-green-600 hover:bg-green-700 text-white"
                             onClick={(e) => handleMessageLender(product, e)}
                           >
@@ -749,9 +865,11 @@ export default function ProductsPage() {
                     }`}
                     onClick={(e) => toggleFavorite(product.product_id, e)}
                   >
-                    <Heart className={`w-4 h-4 ${
-                      favorites.has(product.product_id) ? "fill-current" : ""
-                    }`} />
+                    <Heart
+                      className={`w-4 h-4 ${
+                        favorites.has(product.product_id) ? "fill-current" : ""
+                      }`}
+                    />
                   </Button>
                 </div>
               ))}

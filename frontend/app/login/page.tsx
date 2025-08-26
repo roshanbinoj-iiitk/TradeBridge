@@ -1,6 +1,6 @@
 "use client";
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import { Handshake } from "lucide-react";
@@ -16,6 +16,15 @@ export default function LoginPage() {
   const [error, setError] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Store redirect URL from query params to localStorage on component mount
+  useEffect(() => {
+    const redirectTo = searchParams?.get("redirectTo");
+    if (redirectTo) {
+      localStorage.setItem("redirectAfterLogin", redirectTo);
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +39,21 @@ export default function LoginPage() {
     if (error) {
       setError(error.message);
     } else {
-      router.push("/dashboard");
+      // Check if there's a redirect URL in the query params or localStorage
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectTo =
+        urlParams.get("redirectTo") ||
+        localStorage.getItem("redirectAfterLogin");
+
+      // Clear the stored redirect URL
+      localStorage.removeItem("redirectAfterLogin");
+
+      // Redirect to the intended page or default to dashboard
+      if (redirectTo && redirectTo !== "/login" && redirectTo !== "/signup") {
+        router.push(redirectTo);
+      } else {
+        router.push("/dashboard");
+      }
     }
   };
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/components/shared/AuthContext";
+import { useAuthRedirect } from "@/hooks/use-auth-redirect";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -20,7 +20,7 @@ import { Product, Transaction } from "@/types/db";
 import { updateTransactionStatus } from "@/lib/transactions";
 
 export default function LenderPage() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading, isAuthenticated } = useAuthRedirect();
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [rentalRequests, setRentalRequests] = useState<Transaction[]>([]);
@@ -29,15 +29,17 @@ export default function LenderPage() {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.push("/login");
     }
-  }, [user, loading, router]);
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     if (user) {
       fetchLenderData();
     }
+    // fetchLenderData is stable, so it's safe to omit from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
   const fetchLenderData = async () => {
     try {
@@ -63,9 +65,9 @@ export default function LenderPage() {
       console.log("Fetched products:", lenderProducts);
 
       // Fetch product images for all products
-      const productIds = lenderProducts?.map(p => p.product_id) || [];
+      const productIds = lenderProducts?.map((p) => p.product_id) || [];
       let productImages: any[] = [];
-      
+
       if (productIds.length > 0) {
         const { data: images, error: imageError } = await supabase
           .from("product_images")
@@ -80,10 +82,13 @@ export default function LenderPage() {
       }
 
       // Enrich products with images
-      const enrichedProducts = lenderProducts?.map(product => ({
-        ...product,
-        images: productImages.filter(img => img.product_id === product.product_id)
-      })) || [];
+      const enrichedProducts =
+        lenderProducts?.map((product) => ({
+          ...product,
+          images: productImages.filter(
+            (img) => img.product_id === product.product_id
+          ),
+        })) || [];
 
       setProducts(enrichedProducts);
 
@@ -102,8 +107,8 @@ export default function LenderPage() {
 
         if (requests && requests.length > 0) {
           // Get borrower details and product details for requests
-          const borrowerIds = requests.map(r => r.borrower_id);
-          const requestProductIds = requests.map(r => r.product_id);
+          const borrowerIds = requests.map((r) => r.borrower_id);
+          const requestProductIds = requests.map((r) => r.product_id);
 
           // Fetch borrowers
           const { data: borrowers, error: borrowerError } = await supabase
@@ -116,24 +121,29 @@ export default function LenderPage() {
           }
 
           // Fetch products for requests
-          const { data: requestProducts, error: reqProductError } = await supabase
-            .from("products")
-            .select("*")
-            .in("product_id", requestProductIds);
+          const { data: requestProducts, error: reqProductError } =
+            await supabase
+              .from("products")
+              .select("*")
+              .in("product_id", requestProductIds);
 
           if (reqProductError) {
             console.error("Error fetching request products:", reqProductError);
           }
 
           // Enrich requests with borrower and product data
-          const enrichedRequests = requests.map(request => {
-            const borrower = borrowers?.find(b => b.uuid === request.borrower_id);
-            const product = requestProducts?.find(p => p.product_id === request.product_id);
-            
+          const enrichedRequests = requests.map((request) => {
+            const borrower = borrowers?.find(
+              (b) => b.uuid === request.borrower_id
+            );
+            const product = requestProducts?.find(
+              (p) => p.product_id === request.product_id
+            );
+
             return {
               ...request,
               borrower,
-              product
+              product,
             };
           });
 
@@ -142,7 +152,6 @@ export default function LenderPage() {
           setRentalRequests([]);
         }
       }
-
     } catch (error) {
       console.error("Error:", error);
       setError("Failed to load lender data. Please try again.");
@@ -151,14 +160,17 @@ export default function LenderPage() {
     }
   };
 
-  const handleRequestAction = async (transactionId: number, action: "approved" | "rejected") => {
+  const handleRequestAction = async (
+    transactionId: number,
+    action: "approved" | "rejected"
+  ) => {
     try {
       setActionLoading(transactionId);
       await updateTransactionStatus(transactionId, action);
-      
+
       // Refresh the data
       await fetchLenderData();
-      
+
       // Show success message (you can add a toast here)
       console.log(`Request ${action} successfully`);
     } catch (error) {
@@ -170,20 +182,21 @@ export default function LenderPage() {
   };
 
   const getProductAvailabilityStatus = (product: Product) => {
-    if (!product.availability) return { text: "Unavailable", color: "bg-red-500" };
-    
+    if (!product.availability)
+      return { text: "Unavailable", color: "bg-red-500" };
+
     const now = new Date();
     const startDate = product.start_date ? new Date(product.start_date) : null;
     const endDate = product.end_date ? new Date(product.end_date) : null;
-    
+
     if (startDate && now < startDate) {
       return { text: "Available Later", color: "bg-yellow-500" };
     }
-    
+
     if (endDate && now > endDate) {
       return { text: "Expired", color: "bg-red-500" };
     }
-    
+
     return { text: "Available", color: "bg-green-500" };
   };
 
@@ -204,18 +217,23 @@ export default function LenderPage() {
     return new Date(dateString).toLocaleDateString();
   };
 
-  if (loading || !user)
+  if (authLoading || !user)
     return <div className="text-center py-10 text-taupe">Loading...</div>;
 
   if (dataLoading)
-    return <div className="text-center py-10 text-taupe">Loading products...</div>;
+    return (
+      <div className="text-center py-10 text-taupe">Loading products...</div>
+    );
 
   if (error) {
     return (
       <div className="container mx-auto py-10 px-6 min-h-screen">
         <div className="text-center">
           <p className="text-red-500 mb-4">{error}</p>
-          <Button onClick={fetchLenderData} className="bg-jet text-isabelline hover:bg-taupe">
+          <Button
+            onClick={fetchLenderData}
+            className="bg-jet text-isabelline hover:bg-taupe"
+          >
             Retry
           </Button>
         </div>
@@ -227,15 +245,15 @@ export default function LenderPage() {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-4xl font-bold font-serif text-jet">My Products</h1>
         <div className="flex gap-4">
-          <Button 
-            onClick={fetchLenderData} 
-            variant="outline" 
+          <Button
+            onClick={fetchLenderData}
+            variant="outline"
             className="border-jet text-jet hover:bg-jet hover:text-isabelline"
           >
             Refresh
           </Button>
-          <Button 
-            onClick={() => router.push('/products/new')}
+          <Button
+            onClick={() => router.push("/products/new")}
             className="bg-jet text-isabelline hover:bg-taupe"
           >
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Product
@@ -253,31 +271,45 @@ export default function LenderPage() {
               <Card key={request.transaction_id}>
                 <CardHeader>
                   <CardTitle>Request for {request.product?.name}</CardTitle>
-                  <CardDescription>From: {request.borrower?.name || "Unknown User"}</CardDescription>
+                  <CardDescription>
+                    From: {request.borrower?.name || "Unknown User"}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-taupe">
-                    Dates: {formatDate(request.start_date)} - {formatDate(request.end_date)}
+                    Dates: {formatDate(request.start_date)} -{" "}
+                    {formatDate(request.end_date)}
                   </p>
                   <p className="text-sm text-taupe">
-                    Contact: {request.borrower?.contact || request.borrower?.email || "No contact info"}
+                    Contact:{" "}
+                    {request.borrower?.contact ||
+                      request.borrower?.email ||
+                      "No contact info"}
                   </p>
                 </CardContent>
                 <CardFooter className="flex gap-4">
-                  <Button 
+                  <Button
                     className="w-full bg-green-600 hover:bg-green-700 text-white"
-                    onClick={() => handleRequestAction(request.transaction_id, "approved")}
+                    onClick={() =>
+                      handleRequestAction(request.transaction_id, "approved")
+                    }
                     disabled={actionLoading === request.transaction_id}
                   >
-                    {actionLoading === request.transaction_id ? "Approving..." : "Approve"}
+                    {actionLoading === request.transaction_id
+                      ? "Approving..."
+                      : "Approve"}
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="w-full"
-                    onClick={() => handleRequestAction(request.transaction_id, "rejected")}
+                    onClick={() =>
+                      handleRequestAction(request.transaction_id, "rejected")
+                    }
                     disabled={actionLoading === request.transaction_id}
                   >
-                    {actionLoading === request.transaction_id ? "Rejecting..." : "Deny"}
+                    {actionLoading === request.transaction_id
+                      ? "Rejecting..."
+                      : "Deny"}
                   </Button>
                 </CardFooter>
               </Card>
@@ -297,7 +329,7 @@ export default function LenderPage() {
             {products.map((product) => {
               const status = getProductAvailabilityStatus(product);
               const imageUrl = getImageUrl(product);
-              
+
               return (
                 <Card key={product.product_id} className="overflow-hidden">
                   {imageUrl ? (
@@ -323,22 +355,28 @@ export default function LenderPage() {
                     </Badge>
                     <p className="text-sm text-taupe">{product.description}</p>
                     {product.start_date && (
-                      <p className="text-xs text-taupe">Available from: {formatDate(product.start_date)}</p>
+                      <p className="text-xs text-taupe">
+                        Available from: {formatDate(product.start_date)}
+                      </p>
                     )}
                     {product.end_date && (
-                      <p className="text-xs text-taupe">Available until: {formatDate(product.end_date)}</p>
+                      <p className="text-xs text-taupe">
+                        Available until: {formatDate(product.end_date)}
+                      </p>
                     )}
                   </CardContent>
                   <CardFooter className="flex gap-4">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="w-full"
-                      onClick={() => router.push(`/products/${product.product_id}`)}
+                      onClick={() =>
+                        router.push(`/products/${product.product_id}`)
+                      }
                     >
                       View
                     </Button>
-                    <Button 
-                      variant="secondary" 
+                    <Button
+                      variant="secondary"
                       className="w-full"
                       onClick={() => {
                         // TODO: Implement edit functionality
@@ -354,9 +392,11 @@ export default function LenderPage() {
           </div>
         ) : (
           <div className="text-center py-8">
-            <p className="text-taupe mb-4">You haven't listed any products yet.</p>
-            <Button 
-              onClick={() => router.push('/products/new')}
+            <p className="text-taupe mb-4">
+              You haven&apos;t listed any products yet.
+            </p>
+            <Button
+              onClick={() => router.push("/products/new")}
               className="bg-jet text-isabelline hover:bg-taupe"
             >
               <PlusCircle className="mr-2 h-4 w-4" /> Add Your First Product

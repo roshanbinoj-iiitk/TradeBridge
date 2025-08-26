@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/components/shared/AuthContext";
+import { useAuthRedirect } from "@/hooks/use-auth-redirect";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import {
@@ -41,7 +41,7 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isAuthenticated } = useAuthRedirect();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = searchParams?.get("tab") || "borrowing";
@@ -104,11 +104,14 @@ export default function DashboardPage() {
 
       // Calculate stats based on bookings
       const activeBorrowings =
-        borrowingBookings?.filter((b) => b.status === "active" || b.status === "confirmed").length ||
-        0;
+        borrowingBookings?.filter(
+          (b) => b.status === "active" || b.status === "confirmed"
+        ).length || 0;
 
       const activeLendings =
-        lendingBookings?.filter((b) => b.status === "active" || b.status === "confirmed").length || 0;
+        lendingBookings?.filter(
+          (b) => b.status === "active" || b.status === "confirmed"
+        ).length || 0;
 
       const pendingRequests =
         lendingBookings?.filter((b) => b.status === "pending").length || 0;
@@ -139,12 +142,6 @@ export default function DashboardPage() {
       setIsLoading(false);
     }
   }, [user]);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
-  }, [user, loading, router]);
 
   useEffect(() => {
     if (user) {

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import { BackgroundBeams } from "@/components/aceternity/background-beams";
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/select";
 
 export default function SignupPage() {
+  const router = useRouter();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -103,6 +105,8 @@ export default function SignupPage() {
       setSuccess(
         "Signup successful! Please check your email to verify your account before logging in."
       );
+
+      // Clear form
       setForm({
         name: "",
         email: "",
@@ -110,6 +114,14 @@ export default function SignupPage() {
         confirmPassword: "",
         role: "",
       });
+
+      // Redirect to login with any stored redirect URL
+      const redirectTo = localStorage.getItem("redirectAfterLogin");
+      if (redirectTo) {
+        router.push(`/login?redirectTo=${encodeURIComponent(redirectTo)}`);
+      } else {
+        router.push("/login");
+      }
     } catch (err: any) {
       console.error("Signup error:", err);
       setError("An unexpected error occurred. Please try again.");
