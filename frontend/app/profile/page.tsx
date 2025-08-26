@@ -17,7 +17,7 @@ import { Star } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import ProfileSkeleton from "./ProfileSkeleton";
 
-export default function ProfilePage() {
+function ProfilePage() {
   const { user, loading: authLoading, isAuthenticated } = useAuthRedirect();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -30,14 +30,51 @@ export default function ProfilePage() {
       const fetchProfile = async () => {
         setLoading(true);
         const supabase = createClient();
+
         // Fetch from your users table using uuid
         const { data, error } = await supabase
           .from("users")
           .select("*")
           .eq("uuid", user.id)
           .single();
-        if (error) setError(error.message);
-        else setProfile(data);
+
+        if (error) {
+          console.error("Error fetching user data:", error);
+
+          // If user doesn't exist in public.users, try to create them
+          if (error.code === "PGRST116") {
+            // No rows returned
+            console.log(
+              "User not found in public.users, attempting to create..."
+            );
+
+            const { data: newUser, error: createError } = await supabase
+              .from("users")
+              .insert({
+                uuid: user.id,
+                email: user.email || "",
+                name: user.user_metadata?.name || user.email || "",
+                role: "Borrower",
+              })
+              .select("*")
+              .single();
+
+            if (createError) {
+              console.error("Error creating user:", createError);
+              setError(
+                "Failed to create user profile. Please try again or contact support."
+              );
+            } else {
+              console.log("Successfully created user:", newUser);
+              setProfile(newUser);
+            }
+          } else {
+            setError(error.message);
+          }
+        } else {
+          setProfile(data);
+        }
+
         setLoading(false);
       };
       fetchProfile();
@@ -65,8 +102,15 @@ export default function ProfilePage() {
         Please log in to view your profile
       </div>
     );
-  if (error)
-    return <div className="text-center text-red-500 mt-16">{error}</div>;
+  if (error && !profile)
+    return (
+      <div className="text-center mt-16">
+        <div className="text-red-500 mb-4">{error}</div>
+        <Button onClick={() => window.location.reload()} variant="outline">
+          Try Again
+        </Button>
+      </div>
+    );
   if (!profile) return null;
 
   return (
@@ -151,3 +195,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+export default ProfilePage;

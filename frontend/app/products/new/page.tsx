@@ -176,7 +176,7 @@ export default function NewProductPage() {
         description: "Your product has been listed successfully.",
       });
 
-      router.push(`/products/id/${product.product_id}`);
+      router.push(`/products/${product.product_id}`);
     } catch (error) {
       console.error("Error creating product:", error);
       toast({
@@ -404,9 +404,12 @@ export default function NewProductPage() {
                     value={imageInput}
                     onChange={(e) => setImageInput(e.target.value)}
                     placeholder="Enter image URL"
-                    onKeyPress={(e) =>
-                      e.key === "Enter" && (e.preventDefault(), addImageUrl())
-                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addImageUrl();
+                      }
+                    }}
                   />
                   <Button type="button" onClick={addImageUrl} variant="outline">
                     <Upload className="h-4 w-4" />

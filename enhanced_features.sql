@@ -763,3 +763,24 @@ CREATE POLICY "Users can view their own notifications" ON public.notifications F
 CREATE POLICY "Users can update their own notifications" ON public.notifications FOR UPDATE USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can manage their notification settings" ON public.notification_settings FOR ALL USING (auth.uid() = user_id);
+
+-- ===============================
+-- USER DELETION CASCADE TRIGGER
+-- ===============================
+
+-- Function to handle cascade deletion when auth user is deleted
+CREATE OR REPLACE FUNCTION public.handle_auth_user_deletion()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Delete the user from the public.users table
+  -- This will cascade to all related tables due to foreign key constraints
+  DELETE FROM public.users WHERE uuid = OLD.id;
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger on auth.users table for cascade deletion
+CREATE TRIGGER on_auth_user_delete_cascade
+  AFTER DELETE ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_auth_user_deletion();
