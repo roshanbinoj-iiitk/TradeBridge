@@ -469,7 +469,14 @@ export default function ProductsPage() {
               {/* Price Range */}
               <div>
                 <label className="text-sm font-medium text-jet mb-2 block">
-                  Price Range: ₹{priceRange[0]} - ₹{priceRange[1]}
+                  Price Range:{" "}
+                  <span className="font-semibold text-primary">
+                    ₹{priceRange[0]}
+                  </span>{" "}
+                  -{" "}
+                  <span className="font-semibold text-primary">
+                    ₹{priceRange[1]}
+                  </span>
                 </label>
                 <Slider
                   value={priceRange}
@@ -481,8 +488,42 @@ export default function ProductsPage() {
                   }
                   min={0}
                   step={10}
-                  className="mt-2"
+                  className="mt-2 custom-slider"
+                  style={
+                    {
+                      // fallback for browsers not supporting custom classes
+                      "--slider-thumb-size": "1.5rem",
+                      "--slider-thumb-border": "3px solid #444",
+                      "--slider-thumb-shadow": "0 2px 8px rgba(0,0,0,0.15)",
+                      "--slider-track-height": "0.5rem",
+                      "--slider-track-bg": "#e5e7eb",
+                      "--slider-range-bg": "#44403c",
+                    } as React.CSSProperties
+                  }
                 />
+                <style jsx global>{`
+                  .custom-slider [role="slider"] {
+                    height: var(--slider-thumb-size) !important;
+                    width: var(--slider-thumb-size) !important;
+                    background: #fff;
+                    border: var(--slider-thumb-border);
+                    box-shadow: var(--slider-thumb-shadow);
+                    transition: box-shadow 0.2s;
+                  }
+                  .custom-slider [role="slider"]:hover,
+                  .custom-slider [role="slider"]:focus {
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+                    border-color: #d97706;
+                  }
+                  .custom-slider .range-track {
+                    height: var(--slider-track-height);
+                    background: var(--slider-track-bg);
+                    border-radius: 9999px;
+                  }
+                  .custom-slider .range-range {
+                    background: var(--slider-range-bg);
+                  }
+                `}</style>
               </div>
 
               {/* Show Favorites Toggle */}

@@ -22,6 +22,23 @@ export default function EditProductPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Category and Condition options (case preserved)
+  const categories = [
+    "Electronics",
+    "Tools & Equipment",
+    "Sports & Recreation",
+    "Vehicles",
+    "Home & Garden",
+    "Books & Media",
+    "Clothing & Accessories",
+    "Musical Instruments",
+    "Photography",
+    "Camping & Outdoor",
+    "Kitchen & Appliances",
+    "Others",
+  ];
+  const conditions = ["Brand New", "Like New", "Good", "Fair", "Poor"];
+
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -29,7 +46,14 @@ export default function EditProductPage() {
     availability: true,
     start_date: "",
     end_date: "",
+    category: "",
+    condition: "",
   });
+
+  // For product_images table
+  const [imageLinks, setImageLinks] = useState<string[]>([]);
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const [imageLoading, setImageLoading] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -39,12 +63,12 @@ export default function EditProductPage() {
 
   useEffect(() => {
     if (!productId || !user) return;
-    const fetchProduct = async () => {
+    const fetchProductAndImages = async () => {
       setLoading(true);
       setError(null);
       const supabase = createClient();
 
-      // First check if the user owns this product
+      // Fetch product
       const { data, error } = await supabase
         .from("products")
         .select("*")
@@ -67,11 +91,25 @@ export default function EditProductPage() {
           availability: data.availability ?? true,
           start_date: data.start_date ? data.start_date.split("T")[0] : "",
           end_date: data.end_date ? data.end_date.split("T")[0] : "",
+          category: data.category || "",
+          condition: data.condition || "",
         });
       }
+
+      // Fetch product images
+      const { data: images, error: imgErr } = await supabase
+        .from("product_images")
+        .select("image_url")
+        .eq("product_id", productId);
+      if (!imgErr && images) {
+        setImageLinks(images.map((img: any) => img.image_url));
+      } else {
+        setImageLinks([]);
+      }
+
       setLoading(false);
     };
-    fetchProduct();
+    fetchProductAndImages();
   }, [productId, user]);
 
   const handleInputChange = (
@@ -82,6 +120,35 @@ export default function EditProductPage() {
       ...prev,
       [name]: value,
     }));
+  };
+
+  // Add new image URL
+  const handleAddImage = async () => {
+    if (!newImageUrl.trim() || !productId) return;
+    setImageLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("product_images")
+      .insert({ product_id: productId, image_url: newImageUrl.trim() });
+    if (!error) {
+      setImageLinks((prev) => [...prev, newImageUrl.trim()]);
+      setNewImageUrl("");
+    }
+    setImageLoading(false);
+  };
+
+  // Delete image URL
+  const handleDeleteImage = async (url: string) => {
+    if (!productId) return;
+    setImageLoading(true);
+    const supabase = createClient();
+    await supabase
+      .from("product_images")
+      .delete()
+      .eq("product_id", productId)
+      .eq("image_url", url);
+    setImageLinks((prev) => prev.filter((img) => img !== url));
+    setImageLoading(false);
   };
 
   const handleSwitchChange = (checked: boolean) => {
@@ -126,6 +193,8 @@ export default function EditProductPage() {
           availability: form.availability,
           start_date: form.start_date || null,
           end_date: form.end_date || null,
+          category: form.category,
+          condition: form.condition,
         })
         .eq("product_id", productId)
         .eq("lender_id", user.id); // Extra security check
@@ -200,8 +269,56 @@ export default function EditProductPage() {
               {error}
             </div>
           )}
-
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Image URLs Section */}
+            {/* ...existing code for images... */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-jet">
+                Product Images
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newImageUrl}
+                  onChange={(e) => setNewImageUrl(e.target.value)}
+                  placeholder="Add new image URL"
+                  className="border-taupe focus:border-jet"
+                  disabled={imageLoading}
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddImage}
+                  disabled={imageLoading || !newImageUrl.trim()}
+                >
+                  Add
+                </Button>
+              </div>
+              {imageLinks.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {imageLinks.map((url, idx) => (
+                    <div key={idx} className="relative group">
+                      <img
+                        src={url}
+                        alt={`Product image ${idx + 1}`}
+                        className="w-20 h-14 object-cover rounded border"
+                        style={{ background: "#f3f3f3" }}
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="absolute -top-2 -right-2 bg-white/80 hover:bg-red-100 text-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
+                        onClick={() => handleDeleteImage(url)}
+                        disabled={imageLoading}
+                        title="Delete image"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Product Name */}
             <div className="space-y-2">
               <Label htmlFor="name" className="text-sm font-medium text-jet">
                 Product Name *
@@ -216,7 +333,64 @@ export default function EditProductPage() {
                 className="border-taupe focus:border-jet"
               />
             </div>
-
+            {/* Category and Condition */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="category"
+                  className="text-sm font-medium text-jet"
+                >
+                  Category *
+                </Label>
+                <select
+                  id="category"
+                  name="category"
+                  value={form.category}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, category: e.target.value }))
+                  }
+                  required
+                  className="border border-taupe focus:border-jet rounded px-3 py-2 w-full bg-white"
+                >
+                  <option value="" disabled>
+                    Select category
+                  </option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="condition"
+                  className="text-sm font-medium text-jet"
+                >
+                  Condition *
+                </Label>
+                <select
+                  id="condition"
+                  name="condition"
+                  value={form.condition}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, condition: e.target.value }))
+                  }
+                  required
+                  className="border border-taupe focus:border-jet rounded px-3 py-2 w-full bg-white"
+                >
+                  <option value="" disabled>
+                    Select condition
+                  </option>
+                  {conditions.map((cond) => (
+                    <option key={cond} value={cond}>
+                      {cond}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {/* Description */}
             <div className="space-y-2">
               <Label
                 htmlFor="description"
@@ -235,7 +409,7 @@ export default function EditProductPage() {
                 className="border-taupe focus:border-jet"
               />
             </div>
-
+            {/* Price */}
             <div className="space-y-2">
               <Label htmlFor="price" className="text-sm font-medium text-jet">
                 Price per day (₹) *
@@ -253,7 +427,7 @@ export default function EditProductPage() {
                 className="border-taupe focus:border-jet"
               />
             </div>
-
+            {/* Availability Switch */}
             <div className="flex items-center space-x-2">
               <Switch
                 id="availability"
@@ -267,7 +441,7 @@ export default function EditProductPage() {
                 Available for rent
               </Label>
             </div>
-
+            {/* Dates */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label
@@ -285,7 +459,6 @@ export default function EditProductPage() {
                   className="border-taupe focus:border-jet"
                 />
               </div>
-
               <div className="space-y-2">
                 <Label
                   htmlFor="end_date"
@@ -303,7 +476,7 @@ export default function EditProductPage() {
                 />
               </div>
             </div>
-
+            {/* Save/Cancel Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <Button
                 type="submit"

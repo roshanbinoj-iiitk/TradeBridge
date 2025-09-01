@@ -85,7 +85,7 @@ export default function SignupPage() {
 
       // Step 2: Insert user data into your custom users table
       if (authData.user) {
-        const { error: insertError } = await supabase.from("users").insert({
+        const { error: insertError } = await supabase.from("users").upsert({
           email: form.email,
           role: form.role,
           uuid: authData.user.id, // Link to auth user
