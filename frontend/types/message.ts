@@ -2,8 +2,8 @@
 
 export interface Message {
   message_id: number;
+  conversation_id: number;
   sender_id: string;
-  receiver_id: string;
   product_id?: number;
   transaction_id?: number;
   message_text: string;
@@ -12,11 +12,6 @@ export interface Message {
   message_type: 'text' | 'image' | 'system';
   is_deleted: boolean;
   sender?: {
-    uuid: string;
-    name: string;
-    email: string;
-  };
-  receiver?: {
     uuid: string;
     name: string;
     email: string;

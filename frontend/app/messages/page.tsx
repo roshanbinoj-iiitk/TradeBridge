@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useAuthRedirect } from "@/hooks/use-auth-redirect";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,10 +28,14 @@ import {
   markMessagesAsRead,
 } from "@/lib/messages";
 import type { Conversation, Message } from "@/types/message";
+import { createClient } from "@/utils/supabase/client";
 
 export default function MessagesPage() {
   const { user, loading, isAuthenticated } = useAuthRedirect();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const productId = searchParams.get("productId");
+  const otherUserId = searchParams.get("otherUserId");
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] =
@@ -51,6 +55,20 @@ export default function MessagesPage() {
           setLoadingConversations(true);
           const data = await getConversations(user.id);
           setConversations(data);
+
+          // Check for query params to auto-select conversation
+          if (productId && otherUserId) {
+            const matchingConv = data.find(
+              (conv) =>
+                conv.product_id === parseInt(productId) &&
+                (conv.participant1_id === otherUserId ||
+                  conv.participant2_id === otherUserId)
+            );
+            if (matchingConv) {
+              await fetchMessages(matchingConv);
+              setSelectedConversation(matchingConv);
+            }
+          }
         } catch (err) {
           setError("Failed to load conversations");
           console.error("Error fetching conversations:", err);
@@ -61,7 +79,7 @@ export default function MessagesPage() {
 
       fetchConversationsData();
     }
-  }, [user]);
+  }, [user, productId, otherUserId]);
 
   useEffect(() => {
     scrollToBottom();
@@ -89,13 +107,17 @@ export default function MessagesPage() {
   const fetchMessages = async (conversation: Conversation) => {
     if (!user) return;
 
+    // If it's a temporary conversation, don't fetch messages
+    if (conversation.conversation_id > Date.now() - 10000) {
+      // rough check for temp
+      setMessages([]);
+      setLoadingMessages(false);
+      return;
+    }
+
     try {
       setLoadingMessages(true);
-      const data = await getMessages(
-        user.id,
-        conversation.participant2_id,
-        conversation.product_id
-      );
+      const data = await getMessages(conversation.conversation_id);
       setMessages(data);
 
       // Mark messages as read
@@ -122,18 +144,23 @@ export default function MessagesPage() {
     }
   };
 
-  const handleSelectConversation = (conversation: Conversation) => {
+  const handleSelectConversation = async (conversation: Conversation) => {
+    await fetchMessages(conversation);
     setSelectedConversation(conversation);
-    fetchMessages(conversation);
   };
 
   const handleSendMessage = async (messageText: string) => {
     if (!user || !selectedConversation) return;
 
+    const receiverId =
+      selectedConversation.participant1_id === user.id
+        ? selectedConversation.participant2_id
+        : selectedConversation.participant1_id;
+
     try {
       const newMessage = await sendMessage(
         user.id,
-        selectedConversation.participant2_id,
+        receiverId,
         messageText,
         selectedConversation.product_id
       );
@@ -152,6 +179,11 @@ export default function MessagesPage() {
             : conv
         )
       );
+
+      // If it was a temp conversation, refetch to get the real one
+      if (selectedConversation.conversation_id > Date.now() - 10000) {
+        await fetchConversations();
+      }
     } catch (err) {
       setError("Failed to send message");
       console.error("Error sending message:", err);
@@ -240,72 +272,78 @@ export default function MessagesPage() {
               </div>
             ) : (
               <div className="space-y-1">
-                {filteredConversations.map((conversation) => (
-                  <div
-                    key={conversation.conversation_id}
-                    className={`p-4 cursor-pointer hover:bg-gray-50 border-b transition-colors ${
-                      selectedConversation?.conversation_id ===
-                      conversation.conversation_id
-                        ? "bg-blue-50 border-l-4 border-l-blue-600"
-                        : ""
-                    }`}
-                    onClick={() => handleSelectConversation(conversation)}
-                  >
-                    <div className="flex gap-3">
-                      <Avatar>
-                        <AvatarFallback>
-                          {conversation.other_participant?.name
-                            .substring(0, 2)
-                            .toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                {filteredConversations.map((conversation) => {
+                  // Use conversation_id as key since it's unique in DB
+                  const key = conversation.conversation_id;
+                  return (
+                    <div
+                      key={key}
+                      className={`p-4 cursor-pointer hover:bg-gray-50 border-b transition-colors ${
+                        selectedConversation?.conversation_id ===
+                        conversation.conversation_id
+                          ? "bg-blue-50 border-l-4 border-l-blue-600"
+                          : ""
+                      }`}
+                      onClick={() => handleSelectConversation(conversation)}
+                    >
+                      <div className="flex gap-3">
+                        <Avatar>
+                          <AvatarFallback>
+                            {conversation.other_participant?.name
+                              .substring(0, 2)
+                              .toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <h3 className="font-medium text-sm truncate">
-                            {conversation.other_participant?.name}
-                          </h3>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500">
-                              {formatMessageTime(conversation.last_message_at)}
-                            </span>
-                            {conversation.unread_count &&
-                              conversation.unread_count > 0 && (
-                                <Badge className="bg-blue-600 text-white px-2 py-1 text-xs">
-                                  {conversation.unread_count}
-                                </Badge>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start">
+                            <h3 className="font-medium text-sm truncate">
+                              {conversation.other_participant?.name}
+                            </h3>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">
+                                {formatMessageTime(
+                                  conversation.last_message_at
+                                )}
+                              </span>
+                              {conversation.unread_count &&
+                                conversation.unread_count > 0 && (
+                                  <Badge className="bg-blue-600 text-white px-2 py-1 text-xs">
+                                    {conversation.unread_count}
+                                  </Badge>
+                                )}
+                            </div>
+                          </div>
+
+                          {conversation.product && (
+                            <div className="flex items-center gap-2 mt-1">
+                              {conversation.product.image_url && (
+                                <Image
+                                  src={conversation.product.image_url}
+                                  alt={conversation.product.name}
+                                  width={24}
+                                  height={24}
+                                  className="rounded object-cover"
+                                />
                               )}
-                          </div>
+                              <span className="text-xs text-gray-600 truncate">
+                                {conversation.product.name}
+                              </span>
+                            </div>
+                          )}
+
+                          {conversation.latest_message && (
+                            <p className="text-sm text-gray-600 truncate mt-1">
+                              {conversation.latest_message.sender_id ===
+                                user.id && "You: "}
+                              {conversation.latest_message.message_text}
+                            </p>
+                          )}
                         </div>
-
-                        {conversation.product && (
-                          <div className="flex items-center gap-2 mt-1">
-                            {conversation.product.image_url && (
-                              <Image
-                                src={conversation.product.image_url}
-                                alt={conversation.product.name}
-                                width={24}
-                                height={24}
-                                className="rounded object-cover"
-                              />
-                            )}
-                            <span className="text-xs text-gray-600 truncate">
-                              {conversation.product.name}
-                            </span>
-                          </div>
-                        )}
-
-                        {conversation.latest_message && (
-                          <p className="text-sm text-gray-600 truncate mt-1">
-                            {conversation.latest_message.sender_id ===
-                              user.id && "You: "}
-                            {conversation.latest_message.message_text}
-                          </p>
-                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </ScrollArea>
@@ -375,33 +413,35 @@ export default function MessagesPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {messages.map((message, index) => {
-                      const isOwn = message.sender_id === user.id;
-                      const showAvatar =
-                        index === 0 ||
-                        messages[index - 1]?.sender_id !== message.sender_id;
+                    {messages
+                      .filter((message) => !message.is_deleted)
+                      .map((message, index, arr) => {
+                        const isOwn = message.sender_id === user.id;
+                        const showAvatar =
+                          index === 0 ||
+                          arr[index - 1]?.sender_id !== message.sender_id;
 
-                      return (
-                        <MessageBubble
-                          key={message.message_id}
-                          message={{
-                            id: message.message_id.toString(),
-                            text: message.message_text,
-                            sender: {
-                              id: message.sender_id,
-                              name: isOwn
-                                ? "You"
-                                : message.sender?.name || "Unknown",
-                            },
-                            timestamp: new Date(message.sent_at),
-                            isRead: !!message.read_at,
-                            type: message.message_type as "text" | "system",
-                          }}
-                          isOwn={isOwn}
-                          showAvatar={showAvatar}
-                        />
-                      );
-                    })}
+                        return (
+                          <MessageBubble
+                            key={message.message_id}
+                            message={{
+                              id: message.message_id.toString(),
+                              text: message.message_text,
+                              sender: {
+                                id: message.sender_id,
+                                name: isOwn
+                                  ? "You"
+                                  : message.sender?.name || "Unknown",
+                              },
+                              timestamp: new Date(message.sent_at),
+                              isRead: !!message.read_at,
+                              type: message.message_type as "text" | "system",
+                            }}
+                            isOwn={isOwn}
+                            showAvatar={showAvatar}
+                          />
+                        );
+                      })}
                     <div ref={messagesEndRef} />
                   </div>
                 )}
@@ -419,11 +459,72 @@ export default function MessagesPage() {
               <div>
                 <MessageCircle className="mx-auto h-16 w-16 text-gray-300 mb-4" />
                 <h2 className="text-xl font-semibold text-gray-700 mb-2">
-                  Select a conversation
+                  {productId && otherUserId
+                    ? "Start a conversation"
+                    : "Select a conversation"}
                 </h2>
-                <p className="text-gray-500 max-w-md">
-                  Choose a conversation from the sidebar to start messaging
+                <p className="text-gray-500 max-w-md mb-4">
+                  {productId && otherUserId
+                    ? "Send a message to start chatting with the lender about this product."
+                    : "Choose a conversation from the sidebar to start messaging"}
                 </p>
+                {productId && otherUserId && (
+                  <Button
+                    onClick={async () => {
+                      // Fetch other user and product
+                      const supabase = createClient();
+                      const { data: otherUser } = await supabase
+                        .from("users")
+                        .select("*")
+                        .eq("uuid", otherUserId)
+                        .single();
+                      const { data: product } = await supabase
+                        .from("products")
+                        .select("*")
+                        .eq("product_id", parseInt(productId))
+                        .single();
+
+                      if (!user) return;
+
+                      // Always set participant1 as borrower, participant2 as lender
+                      let participant1_id = user.id;
+                      let participant2_id = otherUserId;
+                      if (product && product.lender_id) {
+                        if (user.id === product.lender_id) {
+                          participant1_id = otherUserId; // borrower
+                          participant2_id = user.id; // lender
+                        }
+                      }
+
+                      const tempConv: Conversation = {
+                        conversation_id: Date.now(), // temporary
+                        participant1_id,
+                        participant2_id,
+                        product_id: parseInt(productId),
+                        last_message_at: new Date().toISOString(),
+                        created_at: new Date().toISOString(),
+                        other_participant: otherUser
+                          ? {
+                              uuid: otherUser.uuid,
+                              name: otherUser.name,
+                              email: otherUser.email,
+                            }
+                          : { uuid: otherUserId, name: "Lender", email: "" },
+                        product: product
+                          ? {
+                              product_id: product.product_id,
+                              name: product.name,
+                              image_url: product.image_url,
+                            }
+                          : undefined,
+                        unread_count: 0,
+                      };
+                      setSelectedConversation(tempConv);
+                    }}
+                  >
+                    Start Conversation
+                  </Button>
+                )}
               </div>
             </div>
           )}

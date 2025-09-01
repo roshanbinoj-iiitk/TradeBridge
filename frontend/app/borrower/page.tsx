@@ -235,7 +235,16 @@ export default function BorrowerPage() {
           </p>
         </CardContent>
         <CardFooter>
-          <Button className="w-full bg-jet text-isabelline hover:bg-taupe">
+          <Button
+            className="w-full bg-jet text-isabelline hover:bg-taupe"
+            onClick={() => {
+              if (rental.product?.lender?.uuid) {
+                router.push(
+                  `/messages?productId=${rental.product_id}&otherUserId=${rental.product.lender.uuid}`
+                );
+              }
+            }}
+          >
             Contact Lender
           </Button>
         </CardFooter>
