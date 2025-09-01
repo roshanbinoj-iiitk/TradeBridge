@@ -32,38 +32,36 @@ export default function BorrowerPage() {
 
       console.log("Fetching rentals for user:", user?.id);
 
-      // First, get the transactions for this borrower
-      const { data: transactions, error: transactionError } = await supabase
-        .from("transactions")
+      // Fetch bookings for this borrower
+      const { data: bookings, error: bookingError } = await supabase
+        .from("bookings")
         .select("*")
         .eq("borrower_id", user?.id)
         .order("start_date", { ascending: false });
 
-      if (transactionError) {
-        console.error("Error fetching transactions:", transactionError);
-        setError(`Failed to load transactions: ${transactionError.message}`);
+      if (bookingError) {
+        console.error("Error fetching bookings:", bookingError);
+        setError(`Failed to load rentals: ${bookingError.message}`);
         return;
       }
 
-      console.log("Fetched transactions:", transactions);
+      console.log("Fetched bookings:", bookings);
 
-      if (!transactions || transactions.length === 0) {
+      if (!bookings || bookings.length === 0) {
         setRentals([]);
         return;
       }
 
       // Get all unique product IDs
-      const productIds = transactions.map((t) => t.product_id);
-
+      const productIds = bookings.map((b) => b.product_id);
       // Get all unique lender IDs
-      const lenderIds = transactions.map((t) => t.lender_id);
+      const lenderIds = bookings.map((b) => b.lender_id);
 
       // Fetch products
       const { data: products, error: productError } = await supabase
         .from("products")
         .select("*")
         .in("product_id", productIds);
-
       if (productError) {
         console.error("Error fetching products:", productError);
       }
@@ -73,7 +71,6 @@ export default function BorrowerPage() {
         .from("product_images")
         .select("*")
         .in("product_id", productIds);
-
       if (imageError) {
         console.error("Error fetching product images:", imageError);
       }
@@ -83,24 +80,23 @@ export default function BorrowerPage() {
         .from("users")
         .select("*")
         .in("uuid", lenderIds);
-
       if (lenderError) {
         console.error("Error fetching lenders:", lenderError);
       }
 
       // Combine the data
-      const enrichedRentals = transactions.map((transaction) => {
+      const enrichedRentals = bookings.map((booking) => {
         const product = products?.find(
-          (p) => p.product_id === transaction.product_id
+          (p) => p.product_id === booking.product_id
         );
-        const lender = lenders?.find((l) => l.uuid === transaction.lender_id);
+        const lender = lenders?.find((l) => l.uuid === booking.lender_id);
         const images =
           productImages?.filter(
-            (img) => img.product_id === transaction.product_id
+            (img) => img.product_id === booking.product_id
           ) || [];
 
         return {
-          ...transaction,
+          ...booking,
           product: product
             ? {
                 ...product,
@@ -150,9 +146,10 @@ export default function BorrowerPage() {
       </div>
     );
   }
+  // Bookings status: pending, confirmed, paid, active, completed, cancelled, disputed
   const currentRentals = rentals.filter(
     (rental) =>
-      rental.status === "approved" &&
+      ["confirmed", "paid", "active"].includes(rental.status) &&
       new Date(rental.end_date || "") >= new Date()
   );
 
@@ -163,21 +160,21 @@ export default function BorrowerPage() {
   const rentalHistory = rentals.filter(
     (rental) =>
       rental.status === "completed" ||
-      (rental.status === "approved" &&
+      (["confirmed", "paid", "active"].includes(rental.status) &&
         new Date(rental.end_date || "") < new Date())
   );
 
   const getStatusBadge = (status: string) => {
-    const statusColors = {
+    const statusColors: Record<string, string> = {
       pending: "bg-yellow-500 text-white",
-      approved: "bg-green-500 text-white",
-      rejected: "bg-red-500 text-white",
-      completed: "bg-blue-500 text-white",
+      confirmed: "bg-green-500 text-white",
+      paid: "bg-green-600 text-white",
+      active: "bg-blue-500 text-white",
+      completed: "bg-gray-700 text-white",
+      cancelled: "bg-red-500 text-white",
+      disputed: "bg-orange-500 text-white",
     };
-    return (
-      statusColors[status as keyof typeof statusColors] ||
-      "bg-gray-500 text-white"
-    );
+    return statusColors[status] || "bg-gray-500 text-white";
   };
 
   const formatDate = (dateString: string | undefined) => {
@@ -185,7 +182,7 @@ export default function BorrowerPage() {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const RentalCard = ({ rental }: { rental: Transaction }) => {
+  const RentalCard = ({ rental }: { rental: any }) => {
     const getImageUrl = () => {
       // First try the main image_url from products table
       if (rental.product?.image_url) {
