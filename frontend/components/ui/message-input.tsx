@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,7 +13,16 @@ export interface MessageInputProps extends React.ComponentProps<"div"> {
 }
 
 const MessageInput = React.forwardRef<HTMLDivElement, MessageInputProps>(
-  ({ className, onSendMessage, placeholder = "Type a message...", disabled = false, ...props }, ref) => {
+  (
+    {
+      className,
+      onSendMessage,
+      placeholder = "Type a message...",
+      disabled = false,
+      ...props
+    },
+    ref
+  ) => {
     const [message, setMessage] = React.useState("");
 
     const handleSend = () => {
