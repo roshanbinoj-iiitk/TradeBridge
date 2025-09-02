@@ -12,18 +12,24 @@ if (!supabaseUrl || !supabaseKey) {
   );
 }
 
-export const createClient = (cookieStore?: ReturnType<typeof cookies>) => {
+export const createClient = (cookieStore?: any) => {
   // If cookieStore is provided, use SSR client (for authenticated requests)
   if (cookieStore) {
+    const store = cookieStore as any;
     return createServerClient(supabaseUrl, supabaseKey, {
       cookies: {
         getAll() {
-          return cookieStore.getAll();
+          try {
+            return store?.getAll ? store.getAll() : [];
+          } catch {
+            return [];
+          }
         },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+            cookiesToSet.forEach(
+              ({ name, value, options }: any) =>
+                store?.set && store.set(name, value, options)
             );
           } catch {
             // ignore
