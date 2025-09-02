@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useAuthRedirect } from "@/hooks/use-auth-redirect";
 import { useSearchParams } from "next/navigation";
 import {
@@ -16,7 +16,7 @@ import { EmptyState } from "@/components/messages/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/utils/supabase/client";
 
-export default function MessagesPage() {
+function MessagesContent() {
   const { user, loading } = useAuthRedirect();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -209,5 +209,13 @@ export default function MessagesPage() {
         messagesEndRef={messagesEndRef}
       />
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <MessagesContent />
+    </Suspense>
   );
 }

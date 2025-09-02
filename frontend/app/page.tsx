@@ -12,9 +12,9 @@ import { Search, CheckCircle, ArrowRight, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { InfiniteMovingCards } from "@/components/aceternity/infinite-moving-cards";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 
-export default function Home() {
+function HomeContent() {
   const searchParams = useSearchParams();
   const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
 
@@ -169,5 +169,13 @@ export default function Home() {
         </div>
       </section>
     </>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }
