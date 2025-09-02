@@ -44,9 +44,9 @@ export function ConversationItem({
               <span className="text-xs text-gray-500">
                 {formatMessageTime(conversation.last_message_at)}
               </span>
-              {conversation.unread_count > 0 && (
+              {(conversation.unread_count ?? 0) > 0 && (
                 <Badge className="bg-blue-600 text-white px-2 py-1 text-xs">
-                  {conversation.unread_count}
+                  {conversation.unread_count ?? 0}
                 </Badge>
               )}
             </div>
