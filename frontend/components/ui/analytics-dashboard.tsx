@@ -1,17 +1,23 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  TrendingUp, 
-  DollarSign, 
-  Package, 
-  Users, 
-  Star, 
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  TrendingUp,
+  DollarSign,
+  Package,
+  Users,
+  Star,
   Calendar,
   BarChart3,
   PieChart,
@@ -19,10 +25,10 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  Download
-} from 'lucide-react';
-import { createClient } from '@/utils/supabase/client';
-import { useAuth } from '@/components/shared/AuthContext';
+  Download,
+} from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+import { useAuth } from "@/components/shared/AuthContext";
 
 interface AnalyticsData {
   revenue: {
@@ -85,11 +91,14 @@ interface AnalyticsDashboardProps {
   className?: string;
 }
 
-export default function AnalyticsDashboard({ userId, className }: AnalyticsDashboardProps) {
+export default function AnalyticsDashboard({
+  userId,
+  className,
+}: AnalyticsDashboardProps) {
   const { user } = useAuth();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState('30'); // days
+  const [timeRange, setTimeRange] = useState("30"); // days
 
   const currentUserId = userId || user?.id;
 
@@ -101,7 +110,7 @@ export default function AnalyticsDashboard({ userId, className }: AnalyticsDashb
 
   const fetchAnalytics = async () => {
     if (!currentUserId) return;
-    
+
     try {
       const supabase = createClient();
       const endDate = new Date();
@@ -110,192 +119,267 @@ export default function AnalyticsDashboard({ userId, className }: AnalyticsDashb
 
       // Fetch bookings data
       const { data: bookingsData, error: bookingsError } = await supabase
-        .from('bookings')
-        .select(`
+        .from("bookings")
+        .select(
+          `
           *,
           products(name, category),
           users!bookings_borrower_id_fkey(name)
-        `)
-        .eq('lender_id', currentUserId);
+        `
+        )
+        .eq("lender_id", currentUserId);
 
       if (bookingsError) throw bookingsError;
 
       // Fetch products data
       const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select(`
+        .from("products")
+        .select(
+          `
           *,
           product_images(image_url),
           reviews(overall_rating),
           product_views(view_count)
-        `)
-        .eq('lender_id', currentUserId);
+        `
+        )
+        .eq("lender_id", currentUserId);
 
       if (productsError) throw productsError;
 
       // Process the data
-      const processedAnalytics = processAnalyticsData(bookingsData || [], productsData || []);
+      const processedAnalytics = processAnalyticsData(
+        bookingsData || [],
+        productsData || []
+      );
       setAnalytics(processedAnalytics);
     } catch (error) {
-      console.error('Error fetching analytics:', error);
+      console.error("Error fetching analytics:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const processAnalyticsData = (bookings: any[], products: any[]): AnalyticsData => {
+  const processAnalyticsData = (
+    bookings: any[],
+    products: any[]
+  ): AnalyticsData => {
     const now = new Date();
     const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    
+
     // Revenue calculations
     const totalRevenue = bookings
-      .filter(b => b.status === 'completed')
+      .filter((b) => b.status === "completed")
       .reduce((sum, b) => sum + (b.total_amount || 0), 0);
-    
+
     const thisMonthRevenue = bookings
-      .filter(b => 
-        b.status === 'completed' && 
-        new Date(b.start_date) >= thisMonth && 
-        new Date(b.start_date) <= thisMonthEnd
+      .filter(
+        (b) =>
+          b.status === "completed" &&
+          new Date(b.start_date) >= thisMonth &&
+          new Date(b.start_date) <= thisMonthEnd
       )
       .reduce((sum, b) => sum + (b.total_amount || 0), 0);
-    
+
     const lastMonthRevenue = bookings
-      .filter(b => 
-        b.status === 'completed' && 
-        new Date(b.start_date) >= lastMonth && 
-        new Date(b.start_date) < thisMonth
+      .filter(
+        (b) =>
+          b.status === "completed" &&
+          new Date(b.start_date) >= lastMonth &&
+          new Date(b.start_date) < thisMonth
       )
       .reduce((sum, b) => sum + (b.total_amount || 0), 0);
-    
-    const revenueGrowth = lastMonthRevenue > 0 
-      ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
-      : 0;
+
+    const revenueGrowth =
+      lastMonthRevenue > 0
+        ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
+        : 0;
 
     // Bookings calculations
     const totalBookings = bookings.length;
-    const activeBookings = bookings.filter(b => b.status === 'confirmed').length;
-    const completedBookings = bookings.filter(b => b.status === 'completed').length;
-    const cancelledBookings = bookings.filter(b => b.status === 'cancelled').length;
-    
-    const thisMonthBookings = bookings.filter(b => 
-      new Date(b.created_at) >= thisMonth && new Date(b.created_at) <= thisMonthEnd
+    const activeBookings = bookings.filter(
+      (b) => b.status === "confirmed"
     ).length;
-    
-    const lastMonthBookings = bookings.filter(b => 
-      new Date(b.created_at) >= lastMonth && new Date(b.created_at) < thisMonth
+    const completedBookings = bookings.filter(
+      (b) => b.status === "completed"
     ).length;
-    
-    const bookingsGrowth = lastMonthBookings > 0 
-      ? ((thisMonthBookings - lastMonthBookings) / lastMonthBookings) * 100 
-      : 0;
+    const cancelledBookings = bookings.filter(
+      (b) => b.status === "cancelled"
+    ).length;
+
+    const thisMonthBookings = bookings.filter(
+      (b) =>
+        new Date(b.created_at) >= thisMonth &&
+        new Date(b.created_at) <= thisMonthEnd
+    ).length;
+
+    const lastMonthBookings = bookings.filter(
+      (b) =>
+        new Date(b.created_at) >= lastMonth &&
+        new Date(b.created_at) < thisMonth
+    ).length;
+
+    const bookingsGrowth =
+      lastMonthBookings > 0
+        ? ((thisMonthBookings - lastMonthBookings) / lastMonthBookings) * 100
+        : 0;
 
     // Products calculations
     const totalProducts = products.length;
-    const activeProducts = products.filter(p => p.available_status).length;
-    const rentedProducts = bookings.filter(b => b.status === 'confirmed').length;
-    const avgProductRating = products.reduce((sum, p) => {
-      const avgRating = p.reviews?.length > 0 
-        ? p.reviews.reduce((rSum: number, r: any) => rSum + r.overall_rating, 0) / p.reviews.length 
-        : 0;
-      return sum + avgRating;
-    }, 0) / (products.length || 1);
-    
-    const totalViews = products.reduce((sum, p) => 
-      sum + (p.product_views?.reduce((vSum: number, v: any) => vSum + (v.view_count || 0), 0) || 0), 0
+    const activeProducts = products.filter((p) => p.available_status).length;
+    const rentedProducts = bookings.filter(
+      (b) => b.status === "confirmed"
+    ).length;
+    const avgProductRating =
+      products.reduce((sum, p) => {
+        const avgRating =
+          p.reviews?.length > 0
+            ? p.reviews.reduce(
+                (rSum: number, r: any) => rSum + r.overall_rating,
+                0
+              ) / p.reviews.length
+            : 0;
+        return sum + avgRating;
+      }, 0) / (products.length || 1);
+
+    const totalViews = products.reduce(
+      (sum, p) =>
+        sum +
+        (p.product_views?.reduce(
+          (vSum: number, v: any) => vSum + (v.view_count || 0),
+          0
+        ) || 0),
+      0
     );
 
     // Customer calculations
-    const uniqueCustomers = new Set(bookings.map(b => b.borrower_id)).size;
+    const uniqueCustomers = new Set(bookings.map((b) => b.borrower_id)).size;
     const returningCustomers = bookings.reduce((customers, booking) => {
       const customerId = booking.borrower_id;
       customers[customerId] = (customers[customerId] || 0) + 1;
       return customers;
     }, {} as Record<string, number>);
-    const returningCount = Object.values(returningCustomers).filter(count => count > 1).length;
+    // Object.values can be typed as unknown in some TS configs; use Object.keys to preserve number typing
+    const returningCount = Object.keys(returningCustomers)
+      .map((k) => returningCustomers[k])
+      .filter((count) => count > 1).length;
 
     // Top products
-    const productPerformance = products.map(product => {
-      const productBookings = bookings.filter(b => b.product_id === product.product_id);
-      const productRevenue = productBookings
-        .filter(b => b.status === 'completed')
-        .reduce((sum, b) => sum + (b.total_amount || 0), 0);
-      const avgRating = product.reviews?.length > 0 
-        ? product.reviews.reduce((sum: number, r: any) => sum + r.overall_rating, 0) / product.reviews.length 
-        : 0;
-      
-      return {
-        product_id: product.product_id,
-        name: product.name,
-        bookings: productBookings.length,
-        revenue: productRevenue,
-        rating: avgRating
-      };
-    }).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+    const productPerformance = products
+      .map((product) => {
+        const productBookings = bookings.filter(
+          (b) => b.product_id === product.product_id
+        );
+        const productRevenue = productBookings
+          .filter((b) => b.status === "completed")
+          .reduce((sum, b) => sum + (b.total_amount || 0), 0);
+        const avgRating =
+          product.reviews?.length > 0
+            ? product.reviews.reduce(
+                (sum: number, r: any) => sum + r.overall_rating,
+                0
+              ) / product.reviews.length
+            : 0;
+
+        return {
+          product_id: product.product_id,
+          name: product.name,
+          bookings: productBookings.length,
+          revenue: productRevenue,
+          rating: avgRating,
+        };
+      })
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
 
     // Revenue by month (last 6 months)
     const revenueByMonth = [];
     for (let i = 5; i >= 0; i--) {
       const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-      const monthName = monthStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      
-      const monthBookings = bookings.filter(b => 
-        new Date(b.start_date) >= monthStart && new Date(b.start_date) <= monthEnd
+      const monthName = monthStart.toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      });
+
+      const monthBookings = bookings.filter(
+        (b) =>
+          new Date(b.start_date) >= monthStart &&
+          new Date(b.start_date) <= monthEnd
       );
       const monthRevenue = monthBookings
-        .filter(b => b.status === 'completed')
+        .filter((b) => b.status === "completed")
         .reduce((sum, b) => sum + (b.total_amount || 0), 0);
-      
+
       revenueByMonth.push({
         month: monthName,
         revenue: monthRevenue,
-        bookings: monthBookings.length
+        bookings: monthBookings.length,
       });
     }
 
     // Category performance
-    const categoryStats = products.reduce((stats, product) => {
-      const category = product.category || 'Other';
-      if (!stats[category]) {
-        stats[category] = { bookings: [], revenue: 0, totalDuration: 0 };
-      }
-      
-      const categoryBookings = bookings.filter(b => b.product_id === product.product_id);
-      stats[category].bookings.push(...categoryBookings);
-      stats[category].revenue += categoryBookings
-        .filter(b => b.status === 'completed')
-        .reduce((sum, b) => sum + (b.total_amount || 0), 0);
-      
-      return stats;
-    }, {} as Record<string, any>);
+    type CategoryStats = {
+      bookings: any[];
+      revenue: number;
+      totalDuration: number;
+    };
+    const categoryStats = products.reduce(
+      (stats: Record<string, CategoryStats>, product) => {
+        const category = product.category || "Other";
+        if (!stats[category]) {
+          stats[category] = { bookings: [], revenue: 0, totalDuration: 0 };
+        }
 
-    const categoryPerformance = Object.entries(categoryStats).map(([category, stats]) => ({
-      category,
-      revenue: stats.revenue,
-      bookings: stats.bookings.length,
-      avgDuration: stats.bookings.length > 0 
-        ? stats.bookings.reduce((sum: number, b: any) => {
-            const duration = new Date(b.end_date).getTime() - new Date(b.start_date).getTime();
-            return sum + (duration / (1000 * 60 * 60 * 24)); // days
-          }, 0) / stats.bookings.length 
-        : 0
-    })).sort((a, b) => b.revenue - a.revenue);
+        const categoryBookings = bookings.filter(
+          (b) => b.product_id === product.product_id
+        );
+        stats[category].bookings.push(...categoryBookings);
+        stats[category].revenue += categoryBookings
+          .filter((b) => b.status === "completed")
+          .reduce((sum, b) => sum + (b.total_amount || 0), 0);
+
+        return stats;
+      },
+      {} as Record<string, CategoryStats>
+    );
+
+    const categoryPerformance = Object.keys(categoryStats)
+      .map((category) => {
+        const stats = categoryStats[category];
+        return {
+          category,
+          revenue: stats.revenue,
+          bookings: stats.bookings.length,
+          avgDuration:
+            stats.bookings.length > 0
+              ? stats.bookings.reduce((sum: number, b: any) => {
+                  const duration =
+                    new Date(b.end_date).getTime() -
+                    new Date(b.start_date).getTime();
+                  return sum + duration / (1000 * 60 * 60 * 24); // days
+                }, 0) / stats.bookings.length
+              : 0,
+        };
+      })
+      .sort((a, b) => b.revenue - a.revenue);
 
     // Upcoming bookings
     const upcoming = bookings
-      .filter(b => b.status === 'confirmed' && new Date(b.start_date) > now)
-      .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+      .filter((b) => b.status === "confirmed" && new Date(b.start_date) > now)
+      .sort(
+        (a, b) =>
+          new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+      )
       .slice(0, 5)
-      .map(b => ({
+      .map((b) => ({
         booking_id: b.booking_id,
-        product_name: b.products?.name || 'Unknown Product',
-        borrower_name: b.users?.name || 'Unknown User',
+        product_name: b.products?.name || "Unknown Product",
+        borrower_name: b.users?.name || "Unknown User",
         start_date: b.start_date,
         end_date: b.end_date,
-        total_amount: b.total_amount || 0
+        total_amount: b.total_amount || 0,
       }));
 
     return {
@@ -303,7 +387,7 @@ export default function AnalyticsDashboard({ userId, className }: AnalyticsDashb
         total: totalRevenue,
         thisMonth: thisMonthRevenue,
         lastMonth: lastMonthRevenue,
-        growth: revenueGrowth
+        growth: revenueGrowth,
       },
       bookings: {
         total: totalBookings,
@@ -311,44 +395,45 @@ export default function AnalyticsDashboard({ userId, className }: AnalyticsDashb
         completed: completedBookings,
         cancelled: cancelledBookings,
         thisMonth: thisMonthBookings,
-        growth: bookingsGrowth
+        growth: bookingsGrowth,
       },
       products: {
         total: totalProducts,
         active: activeProducts,
         rented: rentedProducts,
         avgRating: avgProductRating,
-        views: totalViews
+        views: totalViews,
       },
       customers: {
         unique: uniqueCustomers,
         returning: returningCount,
         avgRating: avgProductRating,
-        satisfaction: avgProductRating >= 4 ? 95 : avgProductRating >= 3 ? 80 : 65
+        satisfaction:
+          avgProductRating >= 4 ? 95 : avgProductRating >= 3 ? 80 : 65,
       },
       topProducts: productPerformance,
       revenueByMonth,
       categoryPerformance,
-      upcoming
+      upcoming,
     };
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
     }).format(amount);
   };
 
   const formatPercentage = (value: number) => {
-    const sign = value > 0 ? '+' : '';
+    const sign = value > 0 ? "+" : "";
     return `${sign}${value.toFixed(1)}%`;
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -407,11 +492,19 @@ export default function AnalyticsDashboard({ userId, className }: AnalyticsDashb
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-bold">{formatCurrency(analytics.revenue.total)}</p>
-                <p className={`text-sm flex items-center ${
-                  analytics.revenue.growth >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
+                <p className="text-sm font-medium text-gray-600">
+                  Total Revenue
+                </p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(analytics.revenue.total)}
+                </p>
+                <p
+                  className={`text-sm flex items-center ${
+                    analytics.revenue.growth >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
                   <TrendingUp className="h-3 w-3 mr-1" />
                   {formatPercentage(analytics.revenue.growth)} this month
                 </p>
@@ -427,11 +520,17 @@ export default function AnalyticsDashboard({ userId, className }: AnalyticsDashb
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Bookings</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Total Bookings
+                </p>
                 <p className="text-2xl font-bold">{analytics.bookings.total}</p>
-                <p className={`text-sm flex items-center ${
-                  analytics.bookings.growth >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
+                <p
+                  className={`text-sm flex items-center ${
+                    analytics.bookings.growth >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
                   <TrendingUp className="h-3 w-3 mr-1" />
                   {formatPercentage(analytics.bookings.growth)} this month
                 </p>
@@ -447,8 +546,12 @@ export default function AnalyticsDashboard({ userId, className }: AnalyticsDashb
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Active Products</p>
-                <p className="text-2xl font-bold">{analytics.products.active}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Active Products
+                </p>
+                <p className="text-2xl font-bold">
+                  {analytics.products.active}
+                </p>
                 <p className="text-sm text-gray-600">
                   {analytics.products.rented} currently rented
                 </p>
@@ -464,8 +567,12 @@ export default function AnalyticsDashboard({ userId, className }: AnalyticsDashb
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Customer Satisfaction</p>
-                <p className="text-2xl font-bold">{analytics.customers.satisfaction}%</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Customer Satisfaction
+                </p>
+                <p className="text-2xl font-bold">
+                  {analytics.customers.satisfaction}%
+                </p>
                 <div className="flex items-center text-sm text-gray-600">
                   <Star className="h-3 w-3 mr-1 fill-yellow-400 text-yellow-400" />
                   {analytics.products.avgRating.toFixed(1)} avg rating
@@ -501,9 +608,14 @@ export default function AnalyticsDashboard({ userId, className }: AnalyticsDashb
               <CardContent>
                 <div className="space-y-2">
                   {analytics.revenueByMonth.map((month, index) => (
-                    <div key={index} className="flex justify-between items-center">
+                    <div
+                      key={index}
+                      className="flex justify-between items-center"
+                    >
                       <span className="text-sm">{month.month}</span>
-                      <span className="font-medium">{formatCurrency(month.revenue)}</span>
+                      <span className="font-medium">
+                        {formatCurrency(month.revenue)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -521,11 +633,18 @@ export default function AnalyticsDashboard({ userId, className }: AnalyticsDashb
               <CardContent>
                 <div className="space-y-2">
                   {analytics.categoryPerformance.map((category, index) => (
-                    <div key={index} className="flex justify-between items-center">
+                    <div
+                      key={index}
+                      className="flex justify-between items-center"
+                    >
                       <span className="text-sm">{category.category}</span>
                       <div className="text-right">
-                        <div className="font-medium">{formatCurrency(category.revenue)}</div>
-                        <div className="text-xs text-gray-500">{category.bookings} bookings</div>
+                        <div className="font-medium">
+                          {formatCurrency(category.revenue)}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {category.bookings} bookings
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -544,19 +663,29 @@ export default function AnalyticsDashboard({ userId, className }: AnalyticsDashb
             </CardHeader>
             <CardContent>
               {analytics.upcoming.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No upcoming bookings</p>
+                <p className="text-gray-500 text-center py-4">
+                  No upcoming bookings
+                </p>
               ) : (
                 <div className="space-y-3">
                   {analytics.upcoming.map((booking) => (
-                    <div key={booking.booking_id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                    <div
+                      key={booking.booking_id}
+                      className="flex justify-between items-center p-3 bg-gray-50 rounded"
+                    >
                       <div>
                         <p className="font-medium">{booking.product_name}</p>
-                        <p className="text-sm text-gray-600">{booking.borrower_name}</p>
+                        <p className="text-sm text-gray-600">
+                          {booking.borrower_name}
+                        </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">{formatCurrency(booking.total_amount)}</p>
+                        <p className="font-medium">
+                          {formatCurrency(booking.total_amount)}
+                        </p>
                         <p className="text-sm text-gray-600">
-                          {formatDate(booking.start_date)} - {formatDate(booking.end_date)}
+                          {formatDate(booking.start_date)} -{" "}
+                          {formatDate(booking.end_date)}
                         </p>
                       </div>
                     </div>
@@ -575,7 +704,10 @@ export default function AnalyticsDashboard({ userId, className }: AnalyticsDashb
             <CardContent>
               <div className="space-y-3">
                 {analytics.topProducts.map((product, index) => (
-                  <div key={product.product_id} className="flex items-center justify-between p-3 border rounded">
+                  <div
+                    key={product.product_id}
+                    className="flex items-center justify-between p-3 border rounded"
+                  >
                     <div className="flex items-center gap-3">
                       <Badge variant="outline">#{index + 1}</Badge>
                       <div>
@@ -595,7 +727,9 @@ export default function AnalyticsDashboard({ userId, className }: AnalyticsDashb
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-green-600">{formatCurrency(product.revenue)}</p>
+                      <p className="font-bold text-green-600">
+                        {formatCurrency(product.revenue)}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -609,21 +743,27 @@ export default function AnalyticsDashboard({ userId, className }: AnalyticsDashb
             <Card>
               <CardContent className="p-6 text-center">
                 <Users className="mx-auto h-8 w-8 text-blue-500 mb-2" />
-                <p className="text-2xl font-bold">{analytics.customers.unique}</p>
+                <p className="text-2xl font-bold">
+                  {analytics.customers.unique}
+                </p>
                 <p className="text-sm text-gray-600">Unique Customers</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6 text-center">
                 <Target className="mx-auto h-8 w-8 text-green-500 mb-2" />
-                <p className="text-2xl font-bold">{analytics.customers.returning}</p>
+                <p className="text-2xl font-bold">
+                  {analytics.customers.returning}
+                </p>
                 <p className="text-sm text-gray-600">Returning Customers</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6 text-center">
                 <Star className="mx-auto h-8 w-8 text-yellow-500 mb-2" />
-                <p className="text-2xl font-bold">{analytics.customers.satisfaction}%</p>
+                <p className="text-2xl font-bold">
+                  {analytics.customers.satisfaction}%
+                </p>
                 <p className="text-sm text-gray-600">Satisfaction Rate</p>
               </CardContent>
             </Card>
@@ -635,28 +775,36 @@ export default function AnalyticsDashboard({ userId, className }: AnalyticsDashb
             <Card>
               <CardContent className="p-6 text-center">
                 <CheckCircle className="mx-auto h-8 w-8 text-green-500 mb-2" />
-                <p className="text-2xl font-bold">{analytics.bookings.completed}</p>
+                <p className="text-2xl font-bold">
+                  {analytics.bookings.completed}
+                </p>
                 <p className="text-sm text-gray-600">Completed</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6 text-center">
                 <Clock className="mx-auto h-8 w-8 text-blue-500 mb-2" />
-                <p className="text-2xl font-bold">{analytics.bookings.active}</p>
+                <p className="text-2xl font-bold">
+                  {analytics.bookings.active}
+                </p>
                 <p className="text-sm text-gray-600">Active</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6 text-center">
                 <AlertTriangle className="mx-auto h-8 w-8 text-red-500 mb-2" />
-                <p className="text-2xl font-bold">{analytics.bookings.cancelled}</p>
+                <p className="text-2xl font-bold">
+                  {analytics.bookings.cancelled}
+                </p>
                 <p className="text-sm text-gray-600">Cancelled</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6 text-center">
                 <Calendar className="mx-auto h-8 w-8 text-purple-500 mb-2" />
-                <p className="text-2xl font-bold">{analytics.bookings.thisMonth}</p>
+                <p className="text-2xl font-bold">
+                  {analytics.bookings.thisMonth}
+                </p>
                 <p className="text-sm text-gray-600">This Month</p>
               </CardContent>
             </Card>
