@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { Product } from "@/types/db";
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Save, X } from "lucide-react";
+import { ArrowLeft, Save, X, Upload } from "lucide-react";
 import { useAuthRedirect } from "@/hooks/use-auth-redirect";
 
 export default function EditProductPage() {
@@ -54,6 +54,8 @@ export default function EditProductPage() {
   const [imageLinks, setImageLinks] = useState<string[]>([]);
   const [newImageUrl, setNewImageUrl] = useState("");
   const [imageLoading, setImageLoading] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -149,6 +151,44 @@ export default function EditProductPage() {
       .eq("image_url", url);
     setImageLinks((prev) => prev.filter((img) => img !== url));
     setImageLoading(false);
+  };
+
+  const handleFileUpload = async (files: FileList) => {
+    if (!user || !productId) return;
+    setImageLoading(true);
+    const supabase = createClient();
+    const uploadedUrls: string[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${user.id}/${Date.now()}-${Math.random()
+          .toString(36)
+          .substring(2)}.${fileExt}`;
+        const { data, error } = await supabase.storage
+          .from("product-images")
+          .upload(fileName, file);
+        if (error) throw error;
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("product-images").getPublicUrl(fileName);
+        uploadedUrls.push(publicUrl);
+      }
+      // Add to product_images table
+      for (const url of uploadedUrls) {
+        await supabase
+          .from("product_images")
+          .insert({ product_id: productId, image_url: url });
+      }
+      setImageLinks((prev) => [...prev, ...uploadedUrls]);
+    } catch (error) {
+      console.error("Upload error:", error);
+      setError("Failed to upload images. Please try again.");
+    } finally {
+      setImageLoading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   const handleSwitchChange = (checked: boolean) => {
@@ -271,11 +311,22 @@ export default function EditProductPage() {
           )}
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Image URLs Section */}
-            {/* ...existing code for images... */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-jet">
                 Product Images
               </Label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                multiple
+                accept="image/*"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    handleFileUpload(e.target.files);
+                  }
+                }}
+                style={{ display: "none" }}
+              />
               <div className="flex gap-2">
                 <Input
                   value={newImageUrl}
@@ -290,6 +341,13 @@ export default function EditProductPage() {
                   disabled={imageLoading || !newImageUrl.trim()}
                 >
                   Add
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={imageLoading}
+                >
+                  {imageLoading ? "Uploading..." : "Upload Files"}
                 </Button>
               </div>
               {imageLinks.length > 0 && (
@@ -476,6 +534,7 @@ export default function EditProductPage() {
                 />
               </div>
             </div>
+
             {/* Save/Cancel Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <Button
