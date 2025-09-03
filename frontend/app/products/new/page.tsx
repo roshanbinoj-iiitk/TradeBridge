@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/components/shared/AuthContext";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { createProduct } from "@/lib/transactions";
+import { createClient } from "@/utils/supabase/client";
 import { format } from "date-fns";
 import {
   ArrowLeft,
@@ -80,6 +81,8 @@ export default function NewProductPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageInput, setImageInput] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
@@ -140,6 +143,57 @@ export default function NewProductPage() {
       ...prev,
       image_urls: prev.image_urls.filter((_, i) => i !== index),
     }));
+  };
+
+  const handleFileUpload = async (files: FileList) => {
+    if (!user) return;
+
+    setIsUploading(true);
+    const supabase = createClient();
+    const uploadedUrls: string[] = [];
+
+    try {
+      for (const file of Array.from(files)) {
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${user.id}/${Date.now()}-${Math.random()
+          .toString(36)
+          .substring(2)}.${fileExt}`;
+
+        const { data, error } = await supabase.storage
+          .from("product-images")
+          .upload(fileName, file);
+
+        if (error) throw error;
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("product-images").getPublicUrl(fileName);
+
+        uploadedUrls.push(publicUrl);
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        image_urls: [...prev.image_urls, ...uploadedUrls],
+      }));
+
+      toast({
+        title: "Upload successful",
+        description: `${uploadedUrls.length} image(s) uploaded successfully.`,
+      });
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload images. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -399,6 +453,16 @@ export default function NewProductPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  multiple
+                  accept="image/*"
+                  onChange={(e) =>
+                    e.target.files && handleFileUpload(e.target.files)
+                  }
+                  style={{ display: "none" }}
+                />
                 <div className="flex gap-2">
                   <Input
                     value={imageInput}
@@ -412,31 +476,39 @@ export default function NewProductPage() {
                     }}
                   />
                   <Button type="button" onClick={addImageUrl} variant="outline">
-                    <Upload className="h-4 w-4" />
+                    Add URL
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    variant="outline"
+                    disabled={isUploading}
+                  >
+                    {isUploading ? "Uploading..." : "Upload Files"}
                   </Button>
                 </div>
 
                 {formData.image_urls.length > 0 && (
                   <div className="space-y-2">
                     <Label>Added Images</Label>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {formData.image_urls.map((url, index) => (
-                        <Badge
-                          key={index}
-                          variant="secondary"
-                          className="pr-1 max-w-xs"
-                        >
-                          <span className="truncate">{url}</span>
+                        <div key={index} className="relative group">
+                          <img
+                            src={url}
+                            alt={`Product image ${index + 1}`}
+                            className="w-full h-32 object-cover rounded-lg border"
+                          />
                           <Button
                             type="button"
-                            variant="ghost"
+                            variant="destructive"
                             size="sm"
                             onClick={() => removeImageUrl(index)}
-                            className="ml-1 h-4 w-4 p-0 hover:bg-red-100"
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-4 w-4" />
                           </Button>
-                        </Badge>
+                        </div>
                       ))}
                     </div>
                   </div>

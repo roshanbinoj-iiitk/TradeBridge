@@ -151,9 +151,7 @@ function ProfilePage() {
               id="email"
               type="email"
               value={profile.email || ""}
-              onChange={(e) =>
-                setProfile({ ...profile, email: e.target.value })
-              }
+              disabled={true}
             />
           </div>
           {error && <div className="text-red-500">{error}</div>}
