@@ -16,6 +16,16 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 import { Transaction } from "@/types/db";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { QRDisplay } from "@/components/ui/qr-display";
+import { QRScanner } from "@/components/ui/qr-scanner";
+import { QrCode, Scan } from "lucide-react";
 
 export default function BorrowerPage() {
   const { user, loading: authLoading, isAuthenticated } = useAuthRedirect();
@@ -234,9 +244,9 @@ export default function BorrowerPage() {
             Daily Rate: ₹{rental.product?.price}
           </p>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex gap-2">
           <Button
-            className="w-full bg-jet text-isabelline hover:bg-taupe"
+            className="flex-1 py-2 rounded-md bg-jet text-isabelline hover:bg-taupe"
             onClick={() => {
               if (rental.product?.lender?.uuid) {
                 router.push(
@@ -247,6 +257,57 @@ export default function BorrowerPage() {
           >
             Contact Lender
           </Button>
+
+          {(rental.status === "confirmed" || rental.status === "active") && (
+            <>
+              {rental.status === "confirmed" && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button className="flex-1 py-2 rounded-md border border-jet text-jet bg-white hover:bg-jet hover:text-isabelline">
+                      <Scan className="h-4 w-4 mr-1" />
+                      Scan Collection QR
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Scan Collection QR Code</DialogTitle>
+                    </DialogHeader>
+                    <QRScanner
+                      expectedFlow="borrow"
+                      onScanSuccess={() => {
+                        fetchBorrowerRentalsData();
+                      }}
+                    />
+                  </DialogContent>
+                </Dialog>
+              )}
+
+              {rental.status === "active" && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button className="flex-1 py-2 rounded-md border border-jet text-jet bg-white hover:bg-jet hover:text-isabelline">
+                      <QrCode className="h-4 w-4 mr-1" />
+                      Return QR
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Return QR Code</DialogTitle>
+                    </DialogHeader>
+                    <QRDisplay
+                      bookingId={
+                        rental.booking_id ?? rental.bookingId ?? rental.id
+                      }
+                      flow="return"
+                      onSuccess={() => {
+                        fetchBorrowerRentalsData();
+                      }}
+                    />
+                  </DialogContent>
+                </Dialog>
+              )}
+            </>
+          )}
         </CardFooter>
       </Card>
     );
