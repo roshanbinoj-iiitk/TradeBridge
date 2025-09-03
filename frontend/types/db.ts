@@ -82,7 +82,14 @@ export interface Booking {
   end_date: string;
   total_amount: number;
   security_deposit: number;
-  status: "pending" | "confirmed" | "paid" | "active" | "completed" | "cancelled" | "disputed";
+  status:
+    | "pending"
+    | "confirmed"
+    | "paid"
+    | "active"
+    | "completed"
+    | "cancelled"
+    | "disputed";
   payment_intent_id?: string;
   payment_status: "pending" | "paid" | "refunded" | "failed";
   pickup_method: "meetup" | "delivery" | "pickup";
@@ -91,6 +98,12 @@ export interface Booking {
   return_instructions?: string;
   created_at: string;
   updated_at: string;
+  // QR collection fields
+  collection_token_hash?: string;
+  collection_token_expires_at?: string;
+  collected_at?: string;
+  collected_by?: string; // UUID
+  collection_method?: "qr" | "manual" | "auto";
   product?: Product;
   borrower?: User;
   lender?: User;
@@ -222,7 +235,20 @@ export interface UserBadge {
 export interface Notification {
   notification_id: number;
   user_id: string; // UUID
-  notification_type: "booking_request" | "booking_confirmed" | "booking_cancelled" | "payment_received" | "payment_due" | "message_received" | "review_received" | "product_returned" | "system_update" | "new_follower" | "forum_reply" | "post_liked" | "achievement_earned";
+  notification_type:
+    | "booking_request"
+    | "booking_confirmed"
+    | "booking_cancelled"
+    | "payment_received"
+    | "payment_due"
+    | "message_received"
+    | "review_received"
+    | "product_returned"
+    | "system_update"
+    | "new_follower"
+    | "forum_reply"
+    | "post_liked"
+    | "achievement_earned";
   title: string;
   message: string;
   related_user_id?: string; // UUID
@@ -239,7 +265,13 @@ export interface SocialShare {
   user_id?: string; // UUID
   product_id?: number;
   forum_post_id?: number;
-  platform: "facebook" | "twitter" | "linkedin" | "whatsapp" | "email" | "copy_link";
+  platform:
+    | "facebook"
+    | "twitter"
+    | "linkedin"
+    | "whatsapp"
+    | "email"
+    | "copy_link";
   share_url: string;
   referrer_url?: string;
   ip_address?: string;

@@ -51,6 +51,39 @@ TradeBridge is a full-stack project with a Next.js/TypeScript frontend and a Pyt
    uvicorn main:app --reload
    ```
 
+## Features
+
+### QR Collection System
+
+TradeBridge includes a secure QR code-based collection system for seamless item handovers:
+
+#### How it works:
+1. **Borrow Flow**: Lender generates a QR code → Borrower scans to confirm collection
+2. **Return Flow**: Borrower generates a QR code → Lender scans to confirm return
+
+#### Setup:
+1. Add the following environment variable to your `.env.local`:
+   ```
+   QR_SIGNING_SECRET=your-secure-random-secret-key-here
+   ```
+
+2. Run the database migration:
+   ```sql
+   -- Run the contents of add_qr_collection_migration.sql
+   ```
+
+#### Usage:
+- In the dashboard, look for "Collection QR" or "Return QR" buttons on active bookings
+- QR codes expire after 10 minutes for security
+- Each QR code can only be used once
+- Successful scans automatically update booking status and send notifications
+
+#### Security:
+- JWT tokens signed server-side with HS256
+- Single-use tokens stored as SHA-256 hashes
+- 10-minute expiry for short-lived access
+- Atomic database updates to prevent race conditions
+
 ## Deployment
 
 - The backend is configured for Vercel deployment (see `backend/vercel.json`).

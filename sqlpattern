@@ -1,0 +1,106 @@
+CREATE TABLE public.bookings (
+  booking_id integer NOT NULL DEFAULT nextval('bookings_booking_id_seq'::regclass),
+  product_id integer NOT NULL,
+  borrower_id uuid NOT NULL,
+  lender_id uuid NOT NULL,
+  start_date date NOT NULL,
+  end_date date NOT NULL,
+  total_amount numeric NOT NULL,
+  security_deposit numeric DEFAULT 0,
+  status character varying DEFAULT 'pending'::character varying CHECK (status::text = ANY (ARRAY['pending'::character varying, 'confirmed'::character varying, 'paid'::character varying, 'active'::character varying, 'completed'::character varying, 'cancelled'::character varying, 'disputed'::character varying]::text[])),
+  payment_intent_id character varying,
+  payment_status character varying DEFAULT 'pendin g'::character varying CHECK (payment_status::text = ANY (ARRAY['pending'::character varying, 'paid'::character varying, 'refunded'::character varying, 'failed'::character varying]::text[])),
+  pickup_method character varying DEFAULT 'meetup'::character varying CHECK (pickup_method::text = ANY (ARRAY['meetup'::character varying, 'delivery'::character varying, 'pickup'::character varying]::text[])),
+  pickup_location text,
+  pickup_instructions text,
+  return_instructions text,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT bookings_pkey PRIMARY KEY (booking_id),
+  CONSTRAINT bookings_borrower_id_fkey FOREIGN KEY (borrower_id) REFERENCES public.users(uuid),
+  CONSTRAINT bookings_lender_id_fkey FOREIGN KEY (lender_id) REFERENCES public.users(uuid),
+  CONSTRAINT bookings_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(product_id)
+);
+CREATE TABLE public.conversations (
+  conversation_id integer NOT NULL DEFAULT nextval('conversations_conversation_id_seq'::regclass),
+  participant1_id uuid NOT NULL,
+  participant2_id uuid NOT NULL,
+  product_id integer,
+  last_message_at timestamp without time zone DEFAULT now(),
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT conversations_pkey PRIMARY KEY (conversation_id),
+  CONSTRAINT conversations_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(product_id),
+  CONSTRAINT conversations_participant1_id_fkey FOREIGN KEY (participant1_id) REFERENCES public.users(uuid),
+  CONSTRAINT conversations_participant2_id_fkey FOREIGN KEY (participant2_id) REFERENCES public.users(uuid)
+);
+
+CREATE TABLE public.messages (
+  message_id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  conversation_id integer NOT NULL,
+  sender_id uuid NOT NULL,
+  message_text text NOT NULL,
+  sent_at timestamp without time zone DEFAULT now(),
+  read_at timestamp without time zone,
+  message_type character varying DEFAULT 'text'::character varying CHECK (message_type::text = ANY (ARRAY['text'::character varying::text, 'system'::character varying::text])),
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT messages_pkey PRIMARY KEY (message_id),
+  CONSTRAINT messages_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.conversations(conversation_id),
+  CONSTRAINT messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.users(uuid)
+);
+CREATE TABLE public.notifications (
+  notification_id integer NOT NULL DEFAULT nextval('notifications_notification_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  notification_type character varying NOT NULL CHECK (notification_type::text = ANY (ARRAY['booking_request'::character varying, 'booking_confirmed'::character varying, 'booking_cancelled'::character varying, 'payment_received'::character varying, 'payment_due'::character varying, 'message_received'::character varying, 'review_received'::character varying, 'product_returned'::character varying, 'system_update'::character varying, 'new_follower'::character varying, 'forum_reply'::character varying, 'post_liked'::character varying, 'achievement_earned'::character varying]::text[])),
+  title character varying NOT NULL,
+  message text NOT NULL,
+  related_user_id uuid,
+  related_product_id integer,
+  related_post_id integer,
+  data jsonb,
+  is_read boolean DEFAULT false,
+  read_at timestamp without time zone,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT notifications_pkey PRIMARY KEY (notification_id),
+  CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(uuid),
+  CONSTRAINT notifications_related_post_id_fkey FOREIGN KEY (related_post_id) REFERENCES public.forum_posts(post_id),
+  CONSTRAINT notifications_related_product_id_fkey FOREIGN KEY (related_product_id) REFERENCES public.products(product_id),
+  CONSTRAINT notifications_related_user_id_fkey FOREIGN KEY (related_user_id) REFERENCES public.users(uuid)
+);
+
+CREATE TABLE public.product_images (
+  image_id integer NOT NULL DEFAULT nextval('product_images_image_id_seq'::regclass),
+  product_id integer NOT NULL,
+  image_url text NOT NULL,
+  CONSTRAINT product_images_pkey PRIMARY KEY (image_id),
+  CONSTRAINT product_images_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(product_id)
+);
+CREATE TABLE public.products (
+  product_id integer NOT NULL DEFAULT nextval('products_product_id_seq'::regclass),
+  name character varying NOT NULL,
+  description text,
+  price numeric NOT NULL,
+  start_date date,
+  end_date date,
+  category character varying,
+  value numeric,
+  condition character varying,
+  availability boolean DEFAULT true,
+  image_url text,
+  lender_id uuid,
+  price_per_day numeric,
+  available_status boolean DEFAULT true,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT products_pkey PRIMARY KEY (product_id),
+  CONSTRAINT products_lender_id_fkey FOREIGN KEY (lender_id) REFERENCES public.users(uuid)
+);
+
+CREATE TABLE public.users (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  name character varying NOT NULL,
+  contact character varying,
+  email character varying NOT NULL UNIQUE,
+  role character varying NOT NULL,
+  uuid uuid UNIQUE,
+  CONSTRAINT users_pkey PRIMARY KEY (id),
+  CONSTRAINT users_uuid_fkey FOREIGN KEY (uuid) REFERENCES auth.users(id)
+);

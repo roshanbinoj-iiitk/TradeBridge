@@ -25,12 +25,23 @@ import {
   Calendar,
   DollarSign,
   RefreshCw,
+  QrCode,
+  Scan,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Booking, Product, User } from "@/types/db";
 import { updateTransactionStatus } from "@/lib/transactions";
 import { useToast } from "@/hooks/use-toast";
 import DashboardSkeleton from "@/components/ui/DashboardSkeleton";
+import { QRDisplay } from "@/components/ui/qr-display";
+import { QRScanner } from "@/components/ui/qr-scanner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface DashboardStats {
   activeBorrowings: number;
@@ -435,7 +446,7 @@ export default function DashboardClient() {
                                   {transaction.product?.name || "Product"}
                                 </h4>
                                 <p className="text-sm text-taupe">
-                                  Lender: {" "}
+                                  Lender:{" "}
                                   {transaction.lender?.name || "Unknown"}
                                 </p>
                               </div>
@@ -468,13 +479,64 @@ export default function DashboardClient() {
                                 </span>
                               </div>
                             </div>
+
+                            <div className="flex items-center space-x-2 mt-2">
+                              {transaction.status === "confirmed" && (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button size="sm" variant="outline">
+                                      <Scan className="h-4 w-4 mr-1" />
+                                      Scan Collection QR
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>
+                                        Scan Collection QR Code
+                                      </DialogTitle>
+                                    </DialogHeader>
+                                    <QRScanner
+                                      expectedFlow="borrow"
+                                      onScanSuccess={() => {
+                                        fetchDashboardData();
+                                      }}
+                                    />
+                                  </DialogContent>
+                                </Dialog>
+                              )}
+
+                              {transaction.status === "active" && (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button size="sm" variant="outline">
+                                      <Scan className="h-4 w-4 mr-1" />
+                                      Scan Return QR
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>
+                                        Scan Return QR Code
+                                      </DialogTitle>
+                                    </DialogHeader>
+                                    <QRScanner
+                                      expectedFlow="return"
+                                      onScanSuccess={() => {
+                                        fetchDashboardData();
+                                      }}
+                                    />
+                                  </DialogContent>
+                                </Dialog>
+                              )}
+                            </div>
                           </div>
                         ))}
 
                       {dashboardData.borrowingTransactions.length > 5 && (
                         <div className="text-center">
                           <Button variant="outline" size="sm">
-                            View All ({dashboardData.borrowingTransactions.length})
+                            View All (
+                            {dashboardData.borrowingTransactions.length})
                           </Button>
                         </div>
                       )}
@@ -555,40 +617,88 @@ export default function DashboardClient() {
                                   {transaction.product?.name || "Product"}
                                 </h4>
                                 <p className="text-sm text-taupe">
-                                  Borrower: {" "}
+                                  Borrower:{" "}
                                   {transaction.borrower?.name || "Unknown"}
                                 </p>
                               </div>
                               {getStatusBadge(transaction.status)}
                             </div>
 
-                            <div className="flex items-center justify-between text-sm">
-                              <div className="flex items-center text-taupe space-x-4">
-                                <div className="flex items-center">
-                                  <Calendar className="h-4 w-4 mr-1" />
-                                  {transaction.start_date && (
-                                    <span>
-                                      {new Date(
-                                        transaction.start_date
-                                      ).toLocaleDateString()}
-                                    </span>
-                                  )}
-                                  {transaction.end_date && (
-                                    <span>
-                                      {" - "}
-                                      {new Date(
-                                        transaction.end_date
-                                      ).toLocaleDateString()}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex items-center">
-                                  <DollarSign className="h-4 w-4 mr-1" />
+                            <div className="flex items-center text-sm text-taupe space-x-4">
+                              <div className="flex items-center">
+                                <Calendar className="h-4 w-4 mr-1" />
+                                {transaction.start_date && (
                                   <span>
-                                    ${transaction.total_amount || 0} total
+                                    {new Date(
+                                      transaction.start_date
+                                    ).toLocaleDateString()}
                                   </span>
-                                </div>
+                                )}
+                                {transaction.end_date && (
+                                  <span>
+                                    {" - "}
+                                    {new Date(
+                                      transaction.end_date
+                                    ).toLocaleDateString()}
+                                  </span>
+                                )}
                               </div>
+                              <div className="flex items-center">
+                                <DollarSign className="h-4 w-4 mr-1" />
+                                <span>
+                                  ${transaction.total_amount || 0} total
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              {transaction.status === "confirmed" && (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button size="sm" variant="outline">
+                                      <QrCode className="h-4 w-4 mr-1" />
+                                      Collection QR
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>
+                                        Collection QR Code
+                                      </DialogTitle>
+                                    </DialogHeader>
+                                    <QRDisplay
+                                      bookingId={transaction.booking_id}
+                                      flow="borrow"
+                                      onSuccess={() => {
+                                        fetchDashboardData();
+                                      }}
+                                    />
+                                  </DialogContent>
+                                </Dialog>
+                              )}
+
+                              {transaction.status === "active" && (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button size="sm" variant="outline">
+                                      <QrCode className="h-4 w-4 mr-1" />
+                                      Return QR
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Return QR Code</DialogTitle>
+                                    </DialogHeader>
+                                    <QRDisplay
+                                      bookingId={transaction.booking_id}
+                                      flow="return"
+                                      onSuccess={() => {
+                                        fetchDashboardData();
+                                      }}
+                                    />
+                                  </DialogContent>
+                                </Dialog>
+                              )}
 
                               {transaction.status === "pending" && (
                                 <div className="space-x-2">
