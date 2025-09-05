@@ -1,3 +1,5 @@
+import { createClient } from "@/utils/supabase/client";
+
 export const parallaxProducts = [
   {
     title: "DJI Mavic Air 2",
@@ -162,3 +164,47 @@ export const testimonials = [
     title: "Hobbyist",
   },
 ];
+
+/**
+ * Fetch a small list of products for the parallax/hero section.
+ * - Single query: products + nested product_images (no per-product requests)
+ * - Limits results to avoid large payloads
+ * - Caller can pass a limit (default 12)
+ */
+export async function getParallaxProducts({ limit = 15 } = {}) {
+  try {
+    const supabase = createClient();
+    const from = 0;
+    const to = Math.max(0, limit - 1);
+
+    const { data, error } = await supabase
+      .from("products")
+      .select(
+        `product_id, name, image_url, product_images(image_id, image_url)`
+      )
+      .eq("available_status", true)
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      console.error("getParallaxProducts supabase error", error);
+      return [];
+    }
+
+    return (data || []).map((p: any) => {
+      const thumbnail =
+        p.image_url ||
+        (p.product_images && p.product_images[0]?.image_url) ||
+        "";
+      return {
+        title: p.name || "Untitled",
+        link: `/products/${p.product_id}`,
+        thumbnail,
+        product_id: p.product_id,
+      };
+    });
+  } catch (err) {
+    console.error("getParallaxProducts error", err);
+    return [];
+  }
+}

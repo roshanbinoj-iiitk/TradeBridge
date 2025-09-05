@@ -1,22 +1,23 @@
 "use client";
 import { HeroParallax } from "@/components/aceternity/hero-parallax";
-import {
-  parallaxProducts,
-  featuredProducts,
-  testimonials,
-} from "@/lib/constants";
+import { featuredProducts, testimonials } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { HoverEffect } from "@/components/aceternity/hover-effect";
 import { Search, CheckCircle, ArrowRight, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { InfiniteMovingCards } from "@/components/aceternity/infinite-moving-cards";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
+import { useParallaxProducts } from "@/hooks/useParallaxProducts";
 
 function HomeContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const [searchTerm, setSearchTerm] = useState("");
   const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
+  const { data: parallaxProducts, loading: parallaxLoading } =
+    useParallaxProducts(15);
 
   useEffect(() => {
     if (searchParams.get("deleted") === "true") {
@@ -24,7 +25,19 @@ function HomeContent() {
       // Remove the query parameter from the URL without page reload
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+    // Initialize search input from ?search=... if present
+    const initial = searchParams.get("search") || "";
+    if (initial) setSearchTerm(initial);
   }, [searchParams]);
+
+  const submitSearch = (q?: string) => {
+    const query = (q ?? searchTerm).trim();
+    if (!query) {
+      router.push("/products");
+      return;
+    }
+    router.push(`/products?search=${encodeURIComponent(query)}`);
+  };
 
   return (
     <>
@@ -56,7 +69,7 @@ function HomeContent() {
         </div>
       )}
       <HeroParallax
-        products={parallaxProducts}
+        products={parallaxProducts || []}
         title={
           <>
             Rent Anything, <br /> From Anyone.
@@ -70,16 +83,22 @@ function HomeContent() {
               <Input
                 placeholder="Search for a drone, camera, tent..."
                 className="pl-10 w-full sm:w-80 h-12 text-base"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    submitSearch();
+                  }
+                }}
               />
             </div>
             <Button
               size="lg"
               className="h-12 text-base bg-jet text-isabelline hover:bg-taupe"
-              asChild
+              onClick={() => router.push("/products")}
             >
-              <Link href="/products">
-                Browse All Products <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
+              Browse All Products <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
         }
