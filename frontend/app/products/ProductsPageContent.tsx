@@ -545,7 +545,7 @@ export default function ProductsPageContent() {
                   }
                 />
                 <style jsx global>{`
-                  .custom-slider [role="slider"] {
+                  .custom-slider .slider-thumb {
                     height: var(--slider-thumb-size) !important;
                     width: var(--slider-thumb-size) !important;
                     background: #fff;
@@ -553,8 +553,8 @@ export default function ProductsPageContent() {
                     box-shadow: var(--slider-thumb-shadow);
                     transition: box-shadow 0.2s;
                   }
-                  .custom-slider [role="slider"]:hover,
-                  .custom-slider [role="slider"]:focus {
+                  .custom-slider .slider-thumb:hover,
+                  .custom-slider .slider-thumb:focus {
                     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
                     border-color: #d97706;
                   }
