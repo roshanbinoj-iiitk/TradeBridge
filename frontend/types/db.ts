@@ -6,7 +6,7 @@ export interface User {
   name: string;
   contact?: string;
   email: string;
-  role: "lender" | "borrower" | "admin";
+  role: "lender" | "borrower" | "admin" | "banned";
 }
 
 export interface UserProfile {
