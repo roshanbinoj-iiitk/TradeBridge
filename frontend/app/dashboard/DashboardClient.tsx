@@ -23,7 +23,7 @@ import {
   XCircle,
   TrendingUp,
   Calendar,
-  DollarSign,
+  IndianRupee,
   RefreshCw,
   QrCode,
   Scan,
@@ -291,10 +291,10 @@ export default function DashboardClient() {
 
         <Card>
           <CardContent className="flex items-center p-6">
-            <DollarSign className="h-8 w-8 text-green-600 mr-3" />
+            <IndianRupee className="h-8 w-8 text-green-600 mr-3" />
             <div>
               <p className="text-2xl font-bold text-jet">
-                ${dashboardData.stats.totalEarnings}
+                {dashboardData.stats.totalEarnings}
               </p>
               <p className="text-sm text-taupe">Total Earnings</p>
             </div>
@@ -473,9 +473,9 @@ export default function DashboardClient() {
                                 )}
                               </div>
                               <div className="flex items-center">
-                                <DollarSign className="h-4 w-4 mr-1" />
+                                <IndianRupee className="h-4 w-4 mr-1" />
                                 <span>
-                                  ${transaction.total_amount || 0} total
+                                  {transaction.total_amount || 0} total
                                 </span>
                               </div>
                             </div>
@@ -644,9 +644,9 @@ export default function DashboardClient() {
                                 )}
                               </div>
                               <div className="flex items-center">
-                                <DollarSign className="h-4 w-4 mr-1" />
+                                <IndianRupee className="h-4 w-4 mr-1" />
                                 <span>
-                                  ${transaction.total_amount || 0} total
+                                  {transaction.total_amount || 0} total
                                 </span>
                               </div>
                             </div>

@@ -38,7 +38,7 @@ import {
   Calendar as CalendarIcon,
   Upload,
   X,
-  DollarSign,
+  IndianRupee,
   Package,
   Camera,
   AlertCircle,
@@ -387,7 +387,7 @@ export default function NewProductPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <DollarSign className="h-5 w-5 mr-2" />
+                  <IndianRupee className="h-5 w-5 mr-2" />
                   Pricing & Value
                 </CardTitle>
               </CardHeader>

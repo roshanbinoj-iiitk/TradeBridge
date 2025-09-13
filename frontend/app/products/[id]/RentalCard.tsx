@@ -51,10 +51,13 @@ export default function RentalCard({ price, productId }: RentalCardProps) {
 
     try {
       const supabase = createClient();
-      
+
       // Check if user is authenticated
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
       if (authError || !user) {
         toast({
           title: "Authentication Required",
@@ -75,17 +78,20 @@ export default function RentalCard({ price, productId }: RentalCardProps) {
 
       toast({
         title: "Success!",
-        description: "Your rental request has been submitted. The lender will be notified.",
+        description:
+          "Your rental request has been submitted. The lender will be notified.",
       });
 
       // Optionally redirect to dashboard or orders page
       router.push("/dashboard");
-
     } catch (error) {
       console.error("Error creating rental request:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit rental request",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to submit rental request",
         variant: "destructive",
       });
     } finally {
@@ -96,7 +102,7 @@ export default function RentalCard({ price, productId }: RentalCardProps) {
   return (
     <Card className="mt-8">
       <CardHeader>
-        <CardTitle className="text-3xl">${price} / day</CardTitle>
+        <CardTitle className="text-3xl">₹{price} / day</CardTitle>
         <CardDescription>Select your rental dates.</CardDescription>
       </CardHeader>
       <CardContent>
@@ -108,7 +114,7 @@ export default function RentalCard({ price, productId }: RentalCardProps) {
         />
         <div className="mt-6">
           <p className="text-lg font-semibold text-jet">
-            Total Price: ${totalPrice > 0 ? totalPrice.toFixed(2) : "___"}
+            Total Price: ₹{totalPrice > 0 ? totalPrice.toFixed(2) : "___"}
           </p>
           <p className="text-sm text-taupe">
             (for {days > 0 ? days : "___"} days)

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import {
   TrendingUp,
-  DollarSign,
+  IndianRupee,
   Package,
   Users,
   Star,
@@ -510,7 +510,7 @@ export default function AnalyticsDashboard({
                 </p>
               </div>
               <div className="p-3 bg-green-100 rounded-full">
-                <DollarSign className="h-6 w-6 text-green-600" />
+                <IndianRupee className="h-6 w-6 text-green-600" />
               </div>
             </div>
           </CardContent>

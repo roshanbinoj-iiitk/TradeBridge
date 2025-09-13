@@ -92,7 +92,7 @@ export default function ProductDetailPage() {
               {product.condition || "N/A"}
             </p>
             <p>
-              <span className="font-semibold text-jet">Value:</span> $
+              <span className="font-semibold text-jet">Value:</span> ₹
               {product.value || "N/A"}
             </p>
           </div>

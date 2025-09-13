@@ -330,7 +330,7 @@ export default function SocialPage() {
                               Professional Camera Kit
                             </h4>
                             <p className="text-sm text-gray-600">
-                              High-quality DSLR camera with lenses - $45/day
+                              High-quality DSLR camera with lenses - ₹45/day
                             </p>
                           </div>
                         </div>
