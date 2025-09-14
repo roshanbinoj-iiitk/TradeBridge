@@ -19,6 +19,7 @@ export default function EditProductPage() {
   const params = useParams();
   const productId = params?.id;
   const [product, setProduct] = useState<Product | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,17 +71,45 @@ export default function EditProductPage() {
       setError(null);
       const supabase = createClient();
 
+      // Fetch current user role to allow admins to edit any product
+      // Fetch current user role to allow admins to edit any product
+      let admin = false;
+      try {
+        const { data: userRow, error: userErr } = await supabase
+          .from("users")
+          .select("role")
+          .eq("uuid", user.id)
+          .single();
+        if (!userErr && userRow) {
+          admin = userRow.role === "admin";
+          setIsAdmin(admin);
+        } else {
+          setIsAdmin(false);
+        }
+      } catch (err) {
+        setIsAdmin(false);
+      }
+
       // Fetch product
-      const { data, error } = await supabase
+      // Build product query: restrict by lender_id only for non-admins
+      let productQuery: any = supabase
         .from("products")
         .select("*")
-        .eq("product_id", productId)
-        .eq("lender_id", user.id)
-        .single();
+        .eq("product_id", Number(productId));
+      if (!admin) {
+        productQuery = productQuery.eq("lender_id", user.id);
+      }
+
+      const { data, error } = await productQuery.single();
 
       if (error) {
         if (error.code === "PGRST116") {
-          setError("Product not found or you don't have permission to edit it");
+          // Differentiate message for admins vs regular users
+          setError(
+            isAdmin
+              ? "Product not found."
+              : "Product not found or you don't have permission to edit it"
+          );
         } else {
           setError("Failed to fetch product");
         }
@@ -102,7 +131,7 @@ export default function EditProductPage() {
       const { data: images, error: imgErr } = await supabase
         .from("product_images")
         .select("image_url")
-        .eq("product_id", productId);
+        .eq("product_id", Number(productId));
       if (!imgErr && images) {
         setImageLinks(images.map((img: any) => img.image_url));
       } else {
@@ -224,27 +253,42 @@ export default function EditProductPage() {
         return;
       }
 
-      const { error } = await supabase
-        .from("products")
-        .update({
-          name: form.name.trim(),
-          description: form.description.trim(),
-          price: Number(form.price),
-          availability: form.availability,
-          start_date: form.start_date || null,
-          end_date: form.end_date || null,
-          category: form.category,
-          condition: form.condition,
-        })
-        .eq("product_id", productId)
-        .eq("lender_id", user.id); // Extra security check
+      // Build update query: include lender check for non-admins
+      let updateQuery: any = supabase.from("products").update({
+        name: form.name.trim(),
+        description: form.description.trim(),
+        price: Number(form.price),
+        availability: form.availability,
+        start_date: form.start_date || null,
+        end_date: form.end_date || null,
+        category: form.category,
+        condition: form.condition,
+      });
+      updateQuery = updateQuery.eq("product_id", productId);
+      if (!isAdmin) {
+        updateQuery = updateQuery.eq("lender_id", user.id); // Extra security check for non-admins
+      }
+
+      const { error } = await updateQuery;
 
       if (error) {
         console.error("Error updating product:", error);
         setError("Failed to update product. Please try again.");
       } else {
-        // Redirect back to lender page with success
-        router.push("/lender");
+        // Go back to previous page after successful save. If there's no history, fallback to /lender
+        try {
+          // next/navigation's router.back() will navigate back if possible
+          router.back();
+          // As a safety net, also push to /lender after a short delay if the history stack didn't change
+          setTimeout(() => {
+            // This check is defensive; window.history.length is available in browser env
+            if (typeof window !== "undefined" && window.history.length <= 1) {
+              router.push("/lender");
+            }
+          }, 250);
+        } catch (e) {
+          router.push("/lender");
+        }
       }
     } catch (error) {
       console.error("Error:", error);

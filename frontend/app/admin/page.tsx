@@ -62,6 +62,7 @@ export default function AdminPage() {
     totalForumPosts: 0,
   });
   const [users, setUsers] = useState<User[]>([]);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -163,18 +164,15 @@ export default function AdminPage() {
 
       // Fetch recent data
       const [
-        { data: recentUsers },
+        { data: allUsers },
         { data: recentProducts },
         { data: recentBookings },
         { data: recentReviews },
         { data: recentPosts },
         { data: recentReplies },
       ] = await Promise.all([
-        supabase
-          .from("users")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(10),
+        // Fetch all users (removed limit) so the Users tab shows the full list
+        supabase.from("users").select("*").order("id", { ascending: false }),
         supabase
           .from("products")
           .select("*, lender:users(name)")
@@ -207,7 +205,7 @@ export default function AdminPage() {
           .limit(10),
       ]);
 
-      setUsers(recentUsers || []);
+      setUsers(allUsers || []);
       setProducts(recentProducts || []);
       setBookings(recentBookings || []);
       setReviews(recentReviews || []);
@@ -215,6 +213,7 @@ export default function AdminPage() {
       setForumReplies(recentReplies || []);
     } catch (error) {
       console.error("Error fetching admin data:", error);
+      setFetchError("Failed to load admin data. Try reloading the page.");
     } finally {
       setLoading(false);
     }
@@ -254,11 +253,7 @@ export default function AdminPage() {
       if (action === "view") {
         router.push(`/products/${productId}`);
       } else if (action === "edit") {
-        // For edit, we might need to navigate to an edit page or open a modal
-        toast({
-          title: "Feature Coming Soon",
-          description: "Product editing will be implemented.",
-        });
+        router.push(`/products/${productId}/edit`);
       } else if (action === "toggle") {
         // Toggle product availability
         const product = products.find((p) => p.product_id === productId);
@@ -266,7 +261,7 @@ export default function AdminPage() {
           const { error } = await supabase
             .from("products")
             .update({ availability: !product.availability })
-            .eq("product_id", productId);
+            .eq("product_id", Number(productId));
 
           if (error) throw error;
 
@@ -583,49 +578,62 @@ export default function AdminPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {users.map((user) => (
-                  <div
-                    key={user.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div>
-                      <p className="font-semibold">{user.name}</p>
-                      <p className="text-sm text-taupe">{user.email}</p>
-                      <Badge
-                        variant={
-                          user.role === "admin" ? "default" : "secondary"
-                        }
-                      >
-                        {user.role}
-                      </Badge>
-                    </div>
-                    <div className="space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleUserView(user.uuid)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
-                      {user.role !== "admin" && (
+                {fetchError && (
+                  <div className="p-4 border rounded-lg text-red-600">
+                    {fetchError}
+                  </div>
+                )}
+
+                {!fetchError && users.length === 0 && (
+                  <div className="p-4 border rounded-lg text-taupe">
+                    No users found.
+                  </div>
+                )}
+
+                {!fetchError &&
+                  users.map((user) => (
+                    <div
+                      key={user.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div>
+                        <p className="font-semibold">{user.name}</p>
+                        <p className="text-sm text-taupe">{user.email}</p>
+                        <Badge
+                          variant={
+                            user.role === "admin" ? "default" : "secondary"
+                          }
+                        >
+                          {user.role}
+                        </Badge>
+                      </div>
+                      <div className="space-x-2">
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() =>
-                            handleUserAction(
-                              user.uuid,
-                              user.role === "banned" ? "unban" : "ban"
-                            )
-                          }
+                          onClick={() => handleUserView(user.uuid)}
                         >
-                          <Ban className="h-4 w-4 mr-1" />
-                          {user.role === "banned" ? "Unban" : "Ban"}
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
                         </Button>
-                      )}
+                        {user.role !== "admin" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              handleUserAction(
+                                user.uuid,
+                                user.role === "banned" ? "unban" : "ban"
+                              )
+                            }
+                          >
+                            <Ban className="h-4 w-4 mr-1" />
+                            {user.role === "banned" ? "Unban" : "Ban"}
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </CardContent>
           </Card>

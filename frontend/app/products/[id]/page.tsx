@@ -7,9 +7,13 @@ import type { Product } from "@/types/db";
 import ProductImageGallery from "./ProductImageGallery";
 import Link from "next/link";
 import RentalCard from "./RentalCard";
+import { useAuth } from "@/components/shared/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Edit } from "lucide-react";
 
 export default function ProductDetailPage() {
   const params = useParams();
+  const { user, loading: authLoading } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,6 +81,21 @@ export default function ProductDetailPage() {
               >
                 Lender: {product.lender.name}
               </Link>
+            )}
+            {user && product.lender && user.id === product.lender.uuid && (
+              <div className="mt-2">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="border-jet text-jet hover:bg-jet hover:text-isabelline"
+                >
+                  <Link href={`/products/${product.product_id}/edit`}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit Product
+                  </Link>
+                </Button>
+              </div>
             )}
           </div>
           <p className="mt-6 text-taupe leading-relaxed">
