@@ -34,6 +34,7 @@ import {
   Shield,
   Users,
   MessageCircle,
+  ChevronDown,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -69,6 +70,10 @@ export default function ProductsPageContent() {
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showTrending, setShowTrending] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showRecentlyViewed, setShowRecentlyViewed] = useState(false);
+  const [showRatingFilter, setShowRatingFilter] = useState(false);
+  const [showAvailabilityFilter, setShowAvailabilityFilter] = useState(false);
 
   const { user, loading: authLoading, isAuthenticated } = useAuthRedirect();
   const router = useRouter();
@@ -180,20 +185,81 @@ export default function ProductsPageContent() {
     }
   }, []);
 
-  // Initialize searchTerm from ?search=... in the URL so visiting
-  // /products?search=camera filters immediately.
+  // Update URL when filters change
+  const updateURL = (newCategory?: string, newSearch?: string) => {
+    const params = new URLSearchParams();
+
+    const category = newCategory ?? selectedCategory;
+    const search = newSearch ?? searchTerm;
+
+    if (search.trim()) {
+      params.set("search", search.trim());
+    }
+
+    if (category && category !== "all") {
+      // Convert internal category values to URL-friendly format
+      const categoryToUrlMapping: { [key: string]: string } = {
+        Electronics: "electronics",
+        "Tools & Equipment": "tools-equipment",
+        "Sports & Recreation": "sports-recreation",
+        Vehicles: "vehicles",
+        "Home & Garden": "home-garden",
+        "Books & Media": "books-media",
+        "Clothing & Accessories": "clothing-accessories",
+        "Musical Instruments": "musical-instruments",
+        Photography: "photography",
+        "Camping & Outdoor": "outdoor-camping",
+        "Kitchen & Appliances": "kitchen-appliances",
+        Other: "other",
+      };
+
+      const urlCategory =
+        categoryToUrlMapping[category] ||
+        category.toLowerCase().replace(/\s+/g, "-");
+      params.set("category", urlCategory);
+    }
+
+    const newURL = params.toString()
+      ? `/products?${params.toString()}`
+      : "/products";
+    router.replace(newURL);
+  };
+
+  // Initialize searchTerm and category from URL params
   useEffect(() => {
     try {
       const q = searchParams?.get("search") || "";
       if (q !== searchTerm) {
         setSearchTerm(q);
       }
+
+      const categoryParam = searchParams?.get("category") || "";
+      if (categoryParam && categoryParam !== selectedCategory) {
+        // Map URL category params to internal category values
+        const urlToCategoryMapping: { [key: string]: string } = {
+          electronics: "Electronics",
+          "tools-equipment": "Tools & Equipment",
+          "sports-recreation": "Sports & Recreation",
+          vehicles: "Vehicles",
+          "home-garden": "Home & Garden",
+          "books-media": "Books & Media",
+          "clothing-accessories": "Clothing & Accessories",
+          "musical-instruments": "Musical Instruments",
+          photography: "Photography",
+          "outdoor-camping": "Camping & Outdoor",
+          "kitchen-appliances": "Kitchen & Appliances",
+          other: "Other",
+        };
+
+        const mappedCategory =
+          urlToCategoryMapping[categoryParam] || categoryParam;
+        setSelectedCategory(mappedCategory);
+      }
     } catch (e) {
-      // ignore
+      console.error("Error parsing URL parameters:", e);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
-
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
@@ -599,6 +665,8 @@ export default function ProductsPageContent() {
         Math.ceil(Math.max(...prices)),
       ]);
     }
+    // Update URL to remove all filters
+    updateURL("all", "");
   };
 
   // Helper to get a valid image URL or fallback
@@ -673,10 +741,44 @@ export default function ProductsPageContent() {
   return (
     <div className="container mx-auto py-10 px-6 min-h-screen">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-        <h1 className="text-4xl font-bold font-serif text-jet mb-4 md:mb-0">
-          Browse Products
-        </h1>
+        <div>
+          <h1 className="text-4xl font-bold font-serif text-jet mb-2">
+            Browse Products
+          </h1>
+          {selectedCategory !== "all" && (
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg text-taupe">Showing:</span>
+              <Badge variant="default" className="bg-jet text-isabelline">
+                {getCategoryLabel(selectedCategory)}
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedCategory("all");
+                  updateURL("all", searchTerm);
+                }}
+                className="text-xs text-taupe hover:text-jet"
+              >
+                Clear filter ✕
+              </Button>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            {recentlyViewed.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRecentlyViewed(!showRecentlyViewed)}
+                className="text-xs"
+              >
+                <Clock className="w-3 h-3 mr-1" />
+                {showRecentlyViewed ? "Hide Recent" : "Recently Viewed"}
+              </Button>
+            )}
+          </div>
           <div className="flex items-center gap-2 text-taupe">
             <span>{filteredProducts.length} products found</span>
             {selectedCategory !== "all" && (
@@ -704,9 +806,71 @@ export default function ProductsPageContent() {
         </div>
       </div>
 
-      {/* Recently Viewed Section */}
-      {recentlyViewed.length > 0 && (
-        <div className="mb-8">
+      {/* Search Bar - Prominent placement */}
+      <div className="mb-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex flex-col md:flex-row gap-4 items-center">
+            {/* Search Input */}
+            <div className="relative flex items-center flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-battleship-gray" />
+              <Input
+                placeholder="Search products..."
+                className="pl-10 pr-12 h-12 text-lg w-full"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    updateURL(selectedCategory, searchTerm);
+                  }
+                }}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-1 h-10 w-10 p-0"
+                onClick={() => updateURL(selectedCategory, searchTerm)}
+              >
+                <Search className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Quick Category Filter */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-jet whitespace-nowrap">
+                Quick Filter:
+              </label>
+              <Select
+                value={selectedCategory}
+                onValueChange={(value) => {
+                  setSelectedCategory(value);
+                  updateURL(value);
+                }}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(availableCategories.length > 0
+                    ? availableCategories
+                    : categories
+                  )
+                    .slice(0, 8)
+                    .map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recently Viewed Section - Toggleable */}
+      {showRecentlyViewed && recentlyViewed.length > 0 && (
+        <div className="mb-8 transition-all duration-300 animate-in slide-in-from-top-5">
           <div className="flex items-center gap-2 mb-4">
             <Clock className="w-5 h-5 text-taupe" />
             <h2 className="text-xl font-semibold text-jet">Recently Viewed</h2>
@@ -739,74 +903,59 @@ export default function ProductsPageContent() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Left Column: Filters */}
-        <aside className="lg:col-span-1">
-          <div className="sticky top-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-semibold text-jet">Filters</h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearFilters}
-                className="text-xs"
-              >
-                <Filter className="w-3 h-3 mr-1" />
-                Clear All
-                {(selectedCategory !== "all" ||
-                  selectedCondition !== "all" ||
-                  searchTerm) && (
-                  <Badge variant="destructive" className="ml-1 text-xs px-1">
-                    {[
-                      selectedCategory !== "all" ? 1 : 0,
-                      selectedCondition !== "all" ? 1 : 0,
-                      searchTerm ? 1 : 0,
-                    ].reduce((a, b) => a + b, 0)}
-                  </Badge>
-                )}
-              </Button>
-            </div>
+      <div className="grid grid-cols-1 gap-8">
+        {/* Floating Filter Button */}
+        <Button
+          onClick={() => setShowFilters(!showFilters)}
+          className={`fixed left-4 top-1/2 -translate-y-1/2 z-40 rounded-full w-12 h-12 p-0 shadow-lg transition-all duration-300 bg-jet hover:bg-taupe text-isabelline ${
+            showFilters ? "left-80" : "left-4"
+          }`}
+          aria-label="Toggle filters"
+        >
+          <Filter className="h-5 w-5" />
+        </Button>
 
-            <div className="space-y-6">
-              {/* Search */}
-              <div className="relative flex items-center">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-battleship-gray" />
-                <Input
-                  placeholder="Search products..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      router.push(
-                        `/products${
-                          searchTerm.trim()
-                            ? `?search=${encodeURIComponent(searchTerm.trim())}`
-                            : ""
-                        }`
-                      );
-                    }
-                  }}
-                />
+        {/* Left Column: Filters - Side Panel */}
+        <aside
+          className={`fixed left-0 top-0 h-full w-72 bg-white shadow-lg z-30 transition-transform duration-300 overflow-y-auto pt-20 ${
+            showFilters ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold text-jet">Filters</h2>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="text-xs"
+                >
+                  <Filter className="w-3 h-3 mr-1" />
+                  Clear All
+                  {(selectedCategory !== "all" ||
+                    selectedCondition !== "all" ||
+                    searchTerm) && (
+                    <Badge variant="destructive" className="ml-1 text-xs px-1">
+                      {[
+                        selectedCategory !== "all" ? 1 : 0,
+                        selectedCondition !== "all" ? 1 : 0,
+                        searchTerm ? 1 : 0,
+                      ].reduce((a, b) => a + b, 0)}
+                    </Badge>
+                  )}
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="ml-2"
-                  onClick={() =>
-                    router.push(
-                      `/products${
-                        searchTerm.trim()
-                          ? `?search=${encodeURIComponent(searchTerm.trim())}`
-                          : ""
-                      }`
-                    )
-                  }
+                  onClick={() => setShowFilters(false)}
+                  className="p-2"
                 >
-                  <Search className="w-4 h-4" />
+                  ✕
                 </Button>
               </div>
-
+            </div>
+            <div className="space-y-6">
               {/* Category Filter */}
               <div>
                 <label className="text-sm font-medium text-jet mb-2 block">
@@ -814,7 +963,10 @@ export default function ProductsPageContent() {
                 </label>
                 <Select
                   value={selectedCategory}
-                  onValueChange={setSelectedCategory}
+                  onValueChange={(value) => {
+                    setSelectedCategory(value);
+                    updateURL(value);
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
@@ -955,73 +1107,95 @@ export default function ProductsPageContent() {
                 </Toggle>
               </div>
 
-              {/* Advanced Filters */}
+              {/* Advanced Filters - Rating */}
               <div>
-                <label className="text-sm font-medium text-jet mb-2 block">
-                  Rating
-                </label>
-                <div className="space-y-2">
-                  {[5, 4, 3, 2, 1].map((rating) => (
-                    <div key={rating} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`rating-${rating}`}
-                        className="rounded"
-                      />
-                      <label
-                        htmlFor={`rating-${rating}`}
-                        className="flex items-center text-sm"
-                      >
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`w-3 h-3 ${
-                                i < rating
-                                  ? "fill-yellow-400 text-yellow-400"
-                                  : "text-gray-300"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="ml-2 text-taupe">& up</span>
-                      </label>
-                    </div>
-                  ))}
-                </div>
+                <button
+                  onClick={() => setShowRatingFilter(!showRatingFilter)}
+                  className="flex items-center justify-between w-full text-sm font-medium text-jet mb-2 hover:text-taupe transition-colors"
+                >
+                  <span>Rating</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      showRatingFilter ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {showRatingFilter && (
+                  <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
+                    {[5, 4, 3, 2, 1].map((rating) => (
+                      <div key={rating} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`rating-${rating}`}
+                          className="rounded"
+                        />
+                        <label
+                          htmlFor={`rating-${rating}`}
+                          className="flex items-center text-sm"
+                        >
+                          <div className="flex">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-3 h-3 ${
+                                  i < rating
+                                    ? "fill-yellow-400 text-yellow-400"
+                                    : "text-gray-300"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="ml-2 text-taupe">& up</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Availability Filter */}
               <div>
-                <label className="text-sm font-medium text-jet mb-2 block">
-                  Availability
-                </label>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="available-now"
-                      className="rounded"
-                    />
-                    <label htmlFor="available-now" className="text-sm">
-                      Available Now
-                    </label>
+                <button
+                  onClick={() =>
+                    setShowAvailabilityFilter(!showAvailabilityFilter)
+                  }
+                  className="flex items-center justify-between w-full text-sm font-medium text-jet mb-2 hover:text-taupe transition-colors"
+                >
+                  <span>Availability</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      showAvailabilityFilter ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {showAvailabilityFilter && (
+                  <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="available-now"
+                        className="rounded"
+                      />
+                      <label htmlFor="available-now" className="text-sm">
+                        Available Now
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="verified-lender"
+                        className="rounded"
+                      />
+                      <label
+                        htmlFor="verified-lender"
+                        className="text-sm flex items-center"
+                      >
+                        <Shield className="w-3 h-3 mr-1 text-green-500" />
+                        Verified Lenders Only
+                      </label>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="verified-lender"
-                      className="rounded"
-                    />
-                    <label
-                      htmlFor="verified-lender"
-                      className="text-sm flex items-center"
-                    >
-                      <Shield className="w-3 h-3 mr-1 text-green-500" />
-                      Verified Lenders Only
-                    </label>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Sort Options */}
@@ -1046,277 +1220,276 @@ export default function ProductsPageContent() {
           </div>
         </aside>
 
-        {/* Right Column: Product Grid */}
-        <main className="lg:col-span-3">
-          {loading ? (
-            <div className="text-center py-10 text-taupe">
-              Loading products...
-            </div>
-          ) : error ? (
-            <div className="text-center py-10 text-red-500">{error}</div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-10">
-              <div className="text-taupe mb-4">
-                No products match your filters.
+        {/* Overlay for mobile when filters are open */}
+        {showFilters && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+            onClick={() => setShowFilters(false)}
+          />
+        )}
+
+        {/* Main Content */}
+        <main className="w-full">
+          <div
+            className={`transition-all duration-300 ${
+              showFilters ? "lg:ml-72" : "ml-0"
+            }`}
+          >
+            {loading ? (
+              <div className="text-center py-10 text-taupe">
+                Loading products...
               </div>
-              <Button onClick={clearFilters} variant="outline">
-                Clear Filters
-              </Button>
-            </div>
-          ) : (
-            <div
-              className={`grid gap-6 ${
-                viewMode === "grid"
-                  ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
-                  : "grid-cols-1"
-              }`}
-            >
-              {filteredProducts.map((product) => (
-                <div key={product.product_id} className="relative">
-                  <Link
-                    href={`/products/${product.product_id}`}
-                    onClick={() => addToRecentlyViewed(product)}
-                  >
-                    <Card
-                      className={`overflow-hidden group hover:shadow-lg transition-all duration-300 ${
-                        viewMode === "list" ? "flex" : ""
-                      }`}
+            ) : error ? (
+              <div className="text-center py-10 text-red-500">{error}</div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="text-center py-10">
+                <div className="text-taupe mb-4">
+                  No products match your filters.
+                </div>
+                <Button onClick={clearFilters} variant="outline">
+                  Clear Filters
+                </Button>
+              </div>
+            ) : (
+              <div
+                className={`grid gap-6 ${
+                  viewMode === "grid"
+                    ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+                    : "grid-cols-1"
+                }`}
+              >
+                {filteredProducts.map((product) => (
+                  <div key={product.product_id} className="relative">
+                    <Link
+                      href={`/products/${product.product_id}`}
+                      onClick={() => addToRecentlyViewed(product)}
                     >
-                      <div
-                        className={`relative overflow-hidden ${
-                          viewMode === "list" ? "w-48 flex-shrink-0" : ""
+                      <Card
+                        className={`overflow-hidden group hover:shadow-lg transition-all duration-300 ${
+                          viewMode === "list" ? "flex" : ""
                         }`}
                       >
-                        <Image
-                          src={getProductImage(product)}
-                          alt={product.name}
-                          width={400}
-                          height={250}
-                          className={`object-cover group-hover:scale-105 transition-transform duration-300 ${
-                            viewMode === "list" ? "w-48 h-32" : "w-full h-56"
-                          }`}
-                        />
-
-                        {/* Category Badge */}
-                        <Badge
-                          className="absolute top-2 left-2 bg-white/90 text-jet hover:bg-white"
-                          variant="secondary"
-                        >
-                          {getCategoryLabel(product.category)}
-                        </Badge>
-
-                        {/* Condition Badge */}
-                        {product.condition && (
-                          <Badge className="absolute top-2 right-2 bg-green-500 text-white">
-                            {product.condition}
-                          </Badge>
-                        )}
-
-                        {/* View Count */}
-                        <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
-                          <Eye className="w-3 h-3" />
-                          <span>{Math.floor(Math.random() * 100) + 10}</span>
-                        </div>
-
-                        {/* Trending Badge */}
-                        {showTrending && Math.random() > 0.7 && (
-                          <Badge className="absolute top-2 left-1/2 -translate-x-1/2 bg-orange-500 text-white">
-                            <TrendingUp className="w-3 h-3 mr-1" />
-                            Trending
-                          </Badge>
-                        )}
-                      </div>
-
-                      <CardContent
-                        className={`p-4 ${viewMode === "list" ? "flex-1" : ""}`}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <h3
-                            className={`font-semibold text-jet line-clamp-1 ${
-                              viewMode === "list" ? "text-base" : "text-lg"
-                            }`}
-                          >
-                            {product.name}
-                          </h3>
-                          <div className="flex items-center gap-1">
-                            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                            <span className="text-sm text-taupe">
-                              {(Math.random() * 2 + 3).toFixed(1)}
-                            </span>
-                            <span className="text-xs text-taupe">
-                              ({Math.floor(Math.random() * 50) + 5})
-                            </span>
-                          </div>
-                        </div>
-
-                        {product.description && (
-                          <p
-                            className={`text-sm text-taupe mb-3 ${
-                              viewMode === "list"
-                                ? "line-clamp-1"
-                                : "line-clamp-2"
-                            }`}
-                          >
-                            {product.description}
-                          </p>
-                        )}
-
                         <div
-                          className={`flex items-center ${
-                            viewMode === "list"
-                              ? "justify-between"
-                              : "justify-between"
+                          className={`relative overflow-hidden ${
+                            viewMode === "list" ? "w-48 flex-shrink-0" : ""
                           }`}
                         >
-                          <div>
-                            <p className="text-lg font-bold text-jet">
-                              ₹{product.price}
-                            </p>
-                            <p className="text-xs text-taupe">per day</p>
-                          </div>
+                          <Image
+                            src={getProductImage(product)}
+                            alt={product.name}
+                            width={400}
+                            height={250}
+                            className={`object-cover group-hover:scale-105 transition-transform duration-300 ${
+                              viewMode === "list" ? "w-48 h-32" : "w-full h-56"
+                            }`}
+                          />
 
-                          <div className="text-right">
-                            <div className="flex items-center gap-1 text-sm text-taupe mb-1">
-                              <MapPin className="w-3 h-3" />
-                              <span>{product.lender?.name || "Unknown"}</span>
-                              <div title="Verified Lender">
-                                <Shield className="w-3 h-3 text-green-500 ml-1" />
-                              </div>
-                            </div>
-                            {product.start_date && (
-                              <div className="flex items-center gap-1 text-xs text-taupe">
-                                <Calendar className="w-3 h-3" />
-                                <span>
-                                  Available from{" "}
-                                  {new Date(
-                                    product.start_date
-                                  ).toLocaleDateString()}
-                                </span>
-                              </div>
-                            )}
-                          </div>
+                          {/* Category Badge */}
+                          <Badge
+                            className="absolute top-2 left-2 bg-white/90 text-jet hover:bg-white"
+                            variant="secondary"
+                          >
+                            {getCategoryLabel(product.category)}
+                          </Badge>
+
+                          {/* Condition Badge */}
+                          {product.condition && (
+                            <Badge className="absolute top-2 right-2 bg-green-500 text-white">
+                              {product.condition}
+                            </Badge>
+                          )}
+
+                          {/* View Count */}
+                          {/* <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
+                            <Eye className="w-3 h-3" />
+                            <span>{Math.floor(Math.random() * 100) + 10}</span>
+                          </div> */}
+
+                          {/* Trending Badge */}
+                          {showTrending && Math.random() > 0.7 && (
+                            <Badge className="absolute top-2 left-1/2 -translate-x-1/2 bg-orange-500 text-white">
+                              <TrendingUp className="w-3 h-3 mr-1" />
+                              Trending
+                            </Badge>
+                          )}
                         </div>
 
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                          <div className="flex justify-between items-center">
-                            <div className="flex gap-2">
-                              <Badge
-                                className={`${
-                                  product.availability
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
-                                }`}
-                                variant="secondary"
-                              >
-                                {product.availability
-                                  ? "Available"
-                                  : "Unavailable"}
-                              </Badge>
-
-                              {/* Social Proof */}
-                              <Badge variant="outline" className="text-xs">
-                                <Users className="w-3 h-3 mr-1" />
-                                {Math.floor(Math.random() * 20) + 5} interested
-                              </Badge>
-                            </div>
-
-                            {product.value && (
-                              <span className="text-xs text-taupe">
-                                Value: ₹{product.value}
+                        <CardContent
+                          className={`p-4 ${
+                            viewMode === "list" ? "flex-1" : ""
+                          }`}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <h3
+                              className={`font-semibold text-jet line-clamp-1 ${
+                                viewMode === "list" ? "text-base" : "text-lg"
+                              }`}
+                            >
+                              {product.name}
+                            </h3>
+                            <div className="flex items-center gap-1">
+                              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                              <span className="text-sm text-taupe">
+                                {(Math.random() * 2 + 3).toFixed(1)}
                               </span>
-                            )}
+                              <span className="text-xs text-taupe">
+                                ({Math.floor(Math.random() * 50) + 5})
+                              </span>
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Quick Preview Button */}
-                        <div className="flex gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="flex-1"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setSelectedProduct(product);
-                                }}
-                              >
-                                Quick Preview
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-2xl">
-                              <DialogHeader>
-                                <DialogTitle>
-                                  {selectedProduct?.name}
-                                </DialogTitle>
-                              </DialogHeader>
-                              {selectedProduct && (
-                                <div className="space-y-4">
-                                  <Image
-                                    src={getProductImage(selectedProduct)}
-                                    alt={selectedProduct.name}
-                                    width={600}
-                                    height={300}
-                                    className="w-full h-64 object-cover rounded"
-                                  />
-                                  <p>{selectedProduct.description}</p>
-                                  <div className="flex justify-between items-center">
-                                    <div>
-                                      <p className="text-2xl font-bold">
-                                        ₹{selectedProduct.price}/day
-                                      </p>
-                                      <p className="text-sm text-taupe">
-                                        by {selectedProduct.lender?.name}
-                                      </p>
-                                    </div>
-                                    <Button asChild>
-                                      <Link
-                                        href={`/products/${selectedProduct.product_id}`}
-                                      >
-                                        View Full Details
-                                      </Link>
-                                    </Button>
-                                  </div>
+                          {product.description && (
+                            <p
+                              className={`text-sm text-taupe mb-3 ${
+                                viewMode === "list"
+                                  ? "line-clamp-1"
+                                  : "line-clamp-2"
+                              }`}
+                            >
+                              {product.description}
+                            </p>
+                          )}
+
+                          <div
+                            className={`flex items-center ${
+                              viewMode === "list"
+                                ? "justify-between"
+                                : "justify-between"
+                            }`}
+                          >
+                            <div>
+                              <p className="text-lg font-bold text-jet">
+                                ₹{product.price}
+                              </p>
+                              <p className="text-xs text-taupe">per day</p>
+                            </div>
+
+                            <div className="text-right">
+                              <div className="flex items-center gap-1 text-sm text-taupe mb-1">
+                                <MapPin className="w-3 h-3" />
+                                <span>{product.lender?.name || "Unknown"}</span>
+                                <div title="Verified Lender">
+                                  <Shield className="w-3 h-3 text-green-500 ml-1" />
+                                </div>
+                              </div>
+                              {product.start_date && (
+                                <div className="flex items-center gap-1 text-xs text-taupe">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>
+                                    Available from{" "}
+                                    {new Date(
+                                      product.start_date
+                                    ).toLocaleDateString()}
+                                  </span>
                                 </div>
                               )}
-                            </DialogContent>
-                          </Dialog>
+                            </div>
+                          </div>
 
-                          {/* Message Lender Button */}
-                          <Button
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                            onClick={(e) => handleMessageLender(product, e)}
-                          >
-                            <MessageCircle className="w-4 h-4 mr-1" />
-                            Message
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <div className="flex justify-between items-center">
+                              <div className="flex gap-2">
+                                <Badge
+                                  className={`${
+                                    product.availability
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-red-100 text-red-800"
+                                  }`}
+                                  variant="secondary"
+                                >
+                                  {product.availability
+                                    ? "Available"
+                                    : "Unavailable"}
+                                </Badge>
 
-                  {/* Floating Favorite Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={`absolute top-2 right-2 z-10 p-2 rounded-full ${
-                      favorites.has(product.product_id)
-                        ? "bg-red-500 text-white border-red-500 hover:bg-red-600"
-                        : "bg-white/90 hover:bg-white"
-                    }`}
-                    onClick={(e) => toggleFavorite(product.product_id, e)}
-                  >
-                    <Heart
-                      className={`w-4 h-4 ${
-                        favorites.has(product.product_id) ? "fill-current" : ""
-                      }`}
-                    />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
+                                {/* Social Proof
+                                <Badge variant="outline" className="text-xs">
+                                  <Users className="w-3 h-3 mr-1" />
+                                  {Math.floor(Math.random() * 20) + 5}{" "}
+                                  interested
+                                </Badge> */}
+                              </div>
+
+                              {product.value && (
+                                <span className="text-xs text-taupe">
+                                  Value: ₹{product.value}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Quick Preview Button */}
+                          <div className="flex gap-2">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setSelectedProduct(product);
+                                  }}
+                                >
+                                  Quick Preview
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-2xl">
+                                <DialogHeader>
+                                  <DialogTitle>
+                                    {selectedProduct?.name}
+                                  </DialogTitle>
+                                </DialogHeader>
+                                {selectedProduct && (
+                                  <div className="space-y-4">
+                                    <Image
+                                      src={getProductImage(selectedProduct)}
+                                      alt={selectedProduct.name}
+                                      width={600}
+                                      height={300}
+                                      className="w-full h-64 object-cover rounded"
+                                    />
+                                    <p>{selectedProduct.description}</p>
+                                    <div className="flex justify-between items-center">
+                                      <div>
+                                        <p className="text-2xl font-bold">
+                                          ₹{selectedProduct.price}/day
+                                        </p>
+                                        <p className="text-sm text-taupe">
+                                          by {selectedProduct.lender?.name}
+                                        </p>
+                                      </div>
+                                      <Button asChild>
+                                        <Link
+                                          href={`/products/${selectedProduct.product_id}`}
+                                        >
+                                          View Full Details
+                                        </Link>
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </DialogContent>
+                            </Dialog>
+
+                            {/* Message Lender Button */}
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                              onClick={(e) => handleMessageLender(product, e)}
+                            >
+                              <MessageCircle className="w-4 h-4 mr-1" />
+                              Message
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </main>
       </div>
     </div>

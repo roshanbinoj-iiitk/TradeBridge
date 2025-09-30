@@ -4,6 +4,7 @@ import { inter, playfairDisplay } from "@/lib/fonts";
 import "./globals.css";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
+import ScrollToTop from "@/components/ui/scroll-to-top";
 import { AuthProvider } from "@/components/shared/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -30,6 +31,7 @@ export default function RootLayout({
           <Navbar />
           <main className="relative overflow-x-hidden">{children}</main>
           <Footer />
+          <ScrollToTop />
           <Toaster />
         </AuthProvider>
       </body>

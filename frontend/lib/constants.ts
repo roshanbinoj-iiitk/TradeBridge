@@ -101,34 +101,70 @@ export const featuredProducts = [
     link: "/products?category=electronics",
   },
   {
-    title: "Events & Party",
+    title: "Tools & Equipment",
     description:
-      "Everything you need for your next gathering, from sound systems to popcorn machines.",
-    link: "/products?category=events",
+      "Professional and DIY tools for construction, repair, and maintenance projects.",
+    link: "/products?category=tools-equipment",
   },
   {
-    title: "DIY & Tools",
+    title: "Sports & Recreation",
     description:
-      "Tackle any home improvement project with our wide selection of power tools.",
-    link: "/products?category=tools",
+      "Equipment for sports, fitness, and recreational activities to stay active and have fun.",
+    link: "/products?category=sports-recreation",
   },
   {
-    title: "Outdoors",
+    title: "Vehicles",
     description:
-      "Explore the great outdoors with our collection of camping gear, bikes, and more.",
-    link: "/products?category=outdoors",
+      "Cars, bikes, scooters, and other transportation options for your mobility needs.",
+    link: "/products?category=vehicles",
   },
   {
     title: "Home & Garden",
     description:
-      "Find the right tools and equipment for your garden and home maintenance needs.",
-    link: "/products?category=home",
+      "Everything for your home improvement, gardening, and household maintenance needs.",
+    link: "/products?category=home-garden",
   },
   {
-    title: "Music & Hobbies",
+    title: "Books & Media",
     description:
-      "Unleash your creativity with musical instruments and hobbyist equipment.",
-    link: "/products?category=hobbies",
+      "Educational materials, entertainment content, and media equipment for learning and leisure.",
+    link: "/products?category=books-media",
+  },
+  {
+    title: "Clothing & Accessories",
+    description:
+      "Fashion items, specialty clothing, and accessories for every occasion and style.",
+    link: "/products?category=clothing-accessories",
+  },
+  {
+    title: "Musical Instruments",
+    description:
+      "Guitars, keyboards, drums, and other instruments to explore your musical creativity.",
+    link: "/products?category=musical-instruments",
+  },
+  {
+    title: "Photography",
+    description:
+      "Professional cameras, lenses, lighting, and photography equipment for stunning captures.",
+    link: "/products?category=photography",
+  },
+  {
+    title: "Camping & Outdoor",
+    description:
+      "Tents, hiking gear, and outdoor equipment for your next adventure in nature.",
+    link: "/products?category=camping-outdoor",
+  },
+  {
+    title: "Kitchen & Appliances",
+    description:
+      "Cooking equipment, small appliances, and kitchen tools for culinary enthusiasts.",
+    link: "/products?category=kitchen-appliances",
+  },
+  {
+    title: "Other",
+    description:
+      "Unique and specialty items that don't fit into traditional categories.",
+    link: "/products?category=other",
   },
 ];
 
