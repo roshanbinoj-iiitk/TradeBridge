@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get authenticated user (scanner)
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
     const {
       data: { user: authUser },
       error: authError,
@@ -117,11 +117,11 @@ export async function POST(request: NextRequest) {
       notificationTarget = booking.lender.uuid;
       notificationMessage = `${booking.borrower.name} has collected the item via QR scan`;
     } else if (flow === "return") {
-      // Lender should be scanning borrower's QR
-      isAuthorized = booking.lender.uuid === authUser.id;
+      // Borrower should be scanning lender's QR (changed to match new QR generation logic)
+      isAuthorized = booking.borrower.uuid === authUser.id;
       newStatus = "completed";
-      notificationTarget = booking.borrower.uuid;
-      notificationMessage = `${booking.lender.name} has confirmed return via QR scan`;
+      notificationTarget = booking.lender.uuid;
+      notificationMessage = `${booking.borrower.name} has returned the item via QR scan`;
     }
 
     if (!isAuthorized) {

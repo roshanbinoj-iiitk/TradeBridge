@@ -2,9 +2,9 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 
 export default async function Page() {
-  // cookies() returns a ReadonlyRequestCookies synchronously in Next 13/14 server components
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  // cookies() returns a ReadonlyRequestCookies in Next 15 and needs to be awaited
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
 
   const { data: todos } = await supabase.from("todos").select();
 
