@@ -152,7 +152,7 @@ export const featuredProducts = [
     title: "Camping & Outdoor",
     description:
       "Tents, hiking gear, and outdoor equipment for your next adventure in nature.",
-    link: "/products?category=camping-outdoor",
+    link: "/products?category=outdoor-camping",
   },
   {
     title: "Kitchen & Appliances",

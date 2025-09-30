@@ -1,103 +1,37 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useAuth } from "@/components/shared/AuthContext";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { createProduct } from "@/lib/transactions";
-import { createClient } from "@/utils/supabase/client";
-import { format } from "date-fns";
 import {
-  ArrowLeft,
-  Calendar as CalendarIcon,
-  Upload,
-  X,
-  IndianRupee,
-  Package,
-  Camera,
-  AlertCircle,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-
-interface ProductFormData {
-  name: string;
-  description: string;
-  category: string;
-  condition: string;
-  price: string;
-  value: string;
-  availability: boolean;
-  start_date: Date | undefined;
-  end_date: Date | undefined;
-  image_urls: string[];
-}
-
-const categories = [
-  "Electronics",
-  "Tools & Equipment",
-  "Sports & Recreation",
-  "Vehicles",
-  "Home & Garden",
-  "Books & Media",
-  "Clothing & Accessories",
-  "Musical Instruments",
-  "Photography",
-  "Camping & Outdoor",
-  "Kitchen & Appliances",
-  "Other",
-];
-
-const conditions = ["Brand New", "Like New", "Good", "Fair", "Poor"];
+  BasicInformationForm,
+  PricingForm,
+  ImageManagement,
+  AvailabilityForm,
+  FormActions,
+  ProductPageHeader,
+} from "@/components/products/forms";
+import { useProductForm, useImageManagement } from "@/hooks/products";
+import { ProductFormData } from "@/types/products/forms";
 
 export default function NewProductPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imageInput, setImageInput] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [formData, setFormData] = useState<ProductFormData>({
-    name: "",
-    description: "",
-    category: "",
-    condition: "",
-    price: "",
-    value: "",
-    availability: true,
-    start_date: undefined,
-    end_date: undefined,
-    image_urls: [],
-  });
+  const { formData, errors, updateFormData, validateForm } = useProductForm();
 
-  const [errors, setErrors] = useState<Partial<ProductFormData>>({});
+  const {
+    imageInput,
+    setImageInput,
+    isUploading,
+    addImageUrl,
+    removeImageUrl,
+    handleFileUpload,
+  } = useImageManagement(user?.id);
 
   // Redirect if not authenticated
   if (!loading && !user) {
@@ -111,95 +45,28 @@ export default function NewProductPage() {
     );
   }
 
-  const validateForm = (): boolean => {
-    const newErrors: Partial<ProductFormData> = {};
-
-    if (!formData.name.trim()) newErrors.name = "Product name is required";
-    if (!formData.description.trim())
-      newErrors.description = "Description is required";
-    if (!formData.category) newErrors.category = "Category is required";
-    if (!formData.condition) newErrors.condition = "Condition is required";
-    if (!formData.price || parseFloat(formData.price) <= 0)
-      newErrors.price = "Valid price is required";
-    if (!formData.value || parseFloat(formData.value) <= 0)
-      newErrors.value = "Valid product value is required";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleAddUrl = () => {
+    addImageUrl(imageInput, formData.image_urls, (urls) =>
+      updateFormData("image_urls", urls)
+    );
   };
 
-  const addImageUrl = () => {
-    if (imageInput.trim() && !formData.image_urls.includes(imageInput.trim())) {
-      setFormData((prev) => ({
-        ...prev,
-        image_urls: [...prev.image_urls, imageInput.trim()],
-      }));
-      setImageInput("");
-    }
+  const handleRemoveImage = (index: number) => {
+    removeImageUrl(index, formData.image_urls, (urls) =>
+      updateFormData("image_urls", urls)
+    );
   };
 
-  const removeImageUrl = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      image_urls: prev.image_urls.filter((_, i) => i !== index),
-    }));
-  };
-
-  const handleFileUpload = async (files: FileList) => {
-    if (!user) return;
-
-    setIsUploading(true);
-    const supabase = createClient();
-    const uploadedUrls: string[] = [];
-
-    try {
-      for (const file of Array.from(files)) {
-        const fileExt = file.name.split(".").pop();
-        const fileName = `${user.id}/${Date.now()}-${Math.random()
-          .toString(36)
-          .substring(2)}.${fileExt}`;
-
-        const { data, error } = await supabase.storage
-          .from("product-images")
-          .upload(fileName, file);
-
-        if (error) throw error;
-
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("product-images").getPublicUrl(fileName);
-
-        uploadedUrls.push(publicUrl);
-      }
-
-      setFormData((prev) => ({
-        ...prev,
-        image_urls: [...prev.image_urls, ...uploadedUrls],
-      }));
-
-      toast({
-        title: "Upload successful",
-        description: `${uploadedUrls.length} image(s) uploaded successfully.`,
-      });
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast({
-        title: "Upload failed",
-        description: "Failed to upload images. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
+  const handleUpload = (files: FileList) => {
+    handleFileUpload(files, formData.image_urls, (urls) =>
+      updateFormData("image_urls", urls)
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm() || !user) return;
+    if (!validateForm(true) || !user) return;
 
     setIsSubmitting(true);
 
@@ -211,7 +78,7 @@ export default function NewProductPage() {
         category: formData.category,
         condition: formData.condition,
         price: parseFloat(formData.price),
-        value: parseFloat(formData.value),
+        value: parseFloat(formData.value || "0"),
         availability: formData.availability,
         start_date: formData.start_date
           ? formData.start_date.toISOString().split("T")[0]
@@ -243,381 +110,52 @@ export default function NewProductPage() {
     }
   };
 
-  const updateFormData = (field: keyof ProductFormData, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-  };
-
   return (
     <div className="container mx-auto py-10 px-6 max-w-4xl">
-      {/* Header */}
-      <div className="mb-8">
-        <Button
-          variant="ghost"
-          onClick={() => router.back()}
-          className="mb-4 hover:bg-gray-100"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-        <h1 className="text-4xl font-bold font-serif text-jet mb-2">
-          List New Product
-        </h1>
-        <p className="text-taupe">
-          Share your items with the community and earn money!
-        </p>
-      </div>
+      <ProductPageHeader
+        title="List New Product"
+        description="Share your items with the community and earn money!"
+        onBack={() => router.back()}
+      />
 
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Form */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Basic Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Package className="h-5 w-5 mr-2" />
-                  Basic Information
-                </CardTitle>
-                <CardDescription>Tell us about your product</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Product Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => updateFormData("name", e.target.value)}
-                    placeholder="e.g. Canon EOS R5 Camera"
-                    className={errors.name ? "border-red-500" : ""}
-                  />
-                  {errors.name && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      {errors.name}
-                    </p>
-                  )}
-                </div>
+            <BasicInformationForm
+              formData={formData}
+              errors={errors}
+              onUpdate={updateFormData}
+            />
 
-                <div>
-                  <Label htmlFor="description">Description *</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) =>
-                      updateFormData("description", e.target.value)
-                    }
-                    placeholder="Describe your product, its features, and any important details..."
-                    rows={4}
-                    className={errors.description ? "border-red-500" : ""}
-                  />
-                  {errors.description && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      {errors.description}
-                    </p>
-                  )}
-                </div>
+            <PricingForm
+              formData={formData}
+              errors={errors}
+              onUpdate={updateFormData}
+              showValue={true}
+            />
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="category">Category *</Label>
-                    <Select
-                      value={formData.category}
-                      onValueChange={(value) =>
-                        updateFormData("category", value)
-                      }
-                    >
-                      <SelectTrigger
-                        className={errors.category ? "border-red-500" : ""}
-                      >
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.category && (
-                      <p className="text-red-500 text-sm mt-1 flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-1" />
-                        {errors.category}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="condition">Condition *</Label>
-                    <Select
-                      value={formData.condition}
-                      onValueChange={(value) =>
-                        updateFormData("condition", value)
-                      }
-                    >
-                      <SelectTrigger
-                        className={errors.condition ? "border-red-500" : ""}
-                      >
-                        <SelectValue placeholder="Select condition" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {conditions.map((condition) => (
-                          <SelectItem key={condition} value={condition}>
-                            {condition}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.condition && (
-                      <p className="text-red-500 text-sm mt-1 flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-1" />
-                        {errors.condition}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Pricing */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <IndianRupee className="h-5 w-5 mr-2" />
-                  Pricing & Value
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="price">Daily Rental Price ($) *</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.price}
-                      onChange={(e) => updateFormData("price", e.target.value)}
-                      placeholder="25.00"
-                      className={errors.price ? "border-red-500" : ""}
-                    />
-                    {errors.price && (
-                      <p className="text-red-500 text-sm mt-1 flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-1" />
-                        {errors.price}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="value">Product Value ($) *</Label>
-                    <Input
-                      id="value"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.value}
-                      onChange={(e) => updateFormData("value", e.target.value)}
-                      placeholder="1500.00"
-                      className={errors.value ? "border-red-500" : ""}
-                    />
-                    {errors.value && (
-                      <p className="text-red-500 text-sm mt-1 flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-1" />
-                        {errors.value}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600">
-                  Product value is used for insurance purposes and security
-                  deposits.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Images */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Camera className="h-5 w-5 mr-2" />
-                  Product Images
-                </CardTitle>
-                <CardDescription>
-                  Add image URLs to showcase your product (optional but
-                  recommended)
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  multiple
-                  accept="image/*"
-                  onChange={(e) =>
-                    e.target.files && handleFileUpload(e.target.files)
-                  }
-                  style={{ display: "none" }}
-                />
-                <div className="flex gap-2">
-                  <Input
-                    value={imageInput}
-                    onChange={(e) => setImageInput(e.target.value)}
-                    placeholder="Enter image URL"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addImageUrl();
-                      }
-                    }}
-                  />
-                  <Button type="button" onClick={addImageUrl} variant="outline">
-                    Add URL
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    variant="outline"
-                    disabled={isUploading}
-                  >
-                    {isUploading ? "Uploading..." : "Upload Files"}
-                  </Button>
-                </div>
-
-                {formData.image_urls.length > 0 && (
-                  <div className="space-y-2">
-                    <Label>Added Images</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {formData.image_urls.map((url, index) => (
-                        <div key={index} className="relative group">
-                          <img
-                            src={url}
-                            alt={`Product image ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-lg border"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => removeImageUrl(index)}
-                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <ImageManagement
+              formData={formData}
+              onUpdate={updateFormData}
+              imageInput={imageInput}
+              setImageInput={setImageInput}
+              isUploading={isUploading}
+              onFileUpload={handleUpload}
+              onAddUrl={handleAddUrl}
+              onRemoveImage={handleRemoveImage}
+            />
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Availability */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Availability</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="availability"
-                    checked={formData.availability}
-                    onCheckedChange={(checked) =>
-                      updateFormData("availability", checked)
-                    }
-                  />
-                  <Label htmlFor="availability">Available for rent</Label>
-                </div>
+            <AvailabilityForm formData={formData} onUpdate={updateFormData} />
 
-                <div className="space-y-3">
-                  <Label>Available From (Optional)</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !formData.start_date && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.start_date ? (
-                          format(formData.start_date, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={formData.start_date}
-                        onSelect={(date) => updateFormData("start_date", date)}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="space-y-3">
-                  <Label>Available Until (Optional)</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !formData.end_date && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.end_date ? (
-                          format(formData.end_date, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={formData.end_date}
-                        onSelect={(date) => updateFormData("end_date", date)}
-                        initialFocus
-                        disabled={(date) =>
-                          formData.start_date
-                            ? date < formData.start_date
-                            : false
-                        }
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Submit Button */}
-            <Card>
-              <CardContent className="pt-6">
-                <Button
-                  type="submit"
-                  className="w-full bg-jet text-isabelline hover:bg-taupe"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Creating..." : "List Product"}
-                </Button>
-                <p className="text-xs text-gray-600 mt-2 text-center">
-                  By listing your product, you agree to our terms of service.
-                </p>
-              </CardContent>
-            </Card>
+            <FormActions
+              isSubmitting={isSubmitting}
+              submitText="List Product"
+              showTerms={true}
+            />
           </div>
         </div>
       </form>

@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { Product } from "@/types/db";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Save, X, Upload } from "lucide-react";
+import { ArrowLeft, Save, X } from "lucide-react";
 import { useAuthRedirect } from "@/hooks/use-auth-redirect";
+import {
+  EditImageManagement,
+  EditFormFields,
+  ProductPageHeader,
+} from "@/components/products/forms";
 
 export default function EditProductPage() {
   const { user, loading: authLoading } = useAuthRedirect();
@@ -23,22 +24,6 @@ export default function EditProductPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Category and Condition options (case preserved)
-  const categories = [
-    "Electronics",
-    "Tools & Equipment",
-    "Sports & Recreation",
-    "Vehicles",
-    "Home & Garden",
-    "Books & Media",
-    "Clothing & Accessories",
-    "Musical Instruments",
-    "Photography",
-    "Camping & Outdoor",
-    "Kitchen & Appliances",
-    "Others",
-  ];
-  const conditions = ["Brand New", "Like New", "Good", "Fair", "Poor"];
 
   const [form, setForm] = useState({
     name: "",
@@ -56,8 +41,6 @@ export default function EditProductPage() {
   const [newImageUrl, setNewImageUrl] = useState("");
   const [imageLoading, setImageLoading] = useState(false);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/login");
@@ -71,7 +54,6 @@ export default function EditProductPage() {
       setError(null);
       const supabase = createClient();
 
-      // Fetch current user role to allow admins to edit any product
       // Fetch current user role to allow admins to edit any product
       let admin = false;
       try {
@@ -91,7 +73,6 @@ export default function EditProductPage() {
       }
 
       // Fetch product
-      // Build product query: restrict by lender_id only for non-admins
       let productQuery: any = supabase
         .from("products")
         .select("*")
@@ -104,7 +85,6 @@ export default function EditProductPage() {
 
       if (error) {
         if (error.code === "PGRST116") {
-          // Differentiate message for admins vs regular users
           setError(
             isAdmin
               ? "Product not found."
@@ -150,6 +130,20 @@ export default function EditProductPage() {
     setForm((prev) => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  const handleSwitchChange = (checked: boolean) => {
+    setForm((prev) => ({
+      ...prev,
+      availability: checked,
+    }));
+  };
+
+  const handleSelectChange = (field: string, value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      [field]: value,
     }));
   };
 
@@ -214,17 +208,7 @@ export default function EditProductPage() {
       setError("Failed to upload images. Please try again.");
     } finally {
       setImageLoading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
     }
-  };
-
-  const handleSwitchChange = (checked: boolean) => {
-    setForm((prev) => ({
-      ...prev,
-      availability: checked,
-    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -266,7 +250,7 @@ export default function EditProductPage() {
       });
       updateQuery = updateQuery.eq("product_id", productId);
       if (!isAdmin) {
-        updateQuery = updateQuery.eq("lender_id", user.id); // Extra security check for non-admins
+        updateQuery = updateQuery.eq("lender_id", user.id);
       }
 
       const { error } = await updateQuery;
@@ -275,13 +259,9 @@ export default function EditProductPage() {
         console.error("Error updating product:", error);
         setError("Failed to update product. Please try again.");
       } else {
-        // Go back to previous page after successful save. If there's no history, fallback to /lender
         try {
-          // next/navigation's router.back() will navigate back if possible
           router.back();
-          // As a safety net, also push to /lender after a short delay if the history stack didn't change
           setTimeout(() => {
-            // This check is defensive; window.history.length is available in browser env
             if (typeof window !== "undefined" && window.history.length <= 1) {
               router.push("/lender");
             }
@@ -331,15 +311,11 @@ export default function EditProductPage() {
 
   return (
     <div className="container mx-auto py-10 px-6 min-h-screen max-w-2xl">
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={() => router.push("/lender")}
-          className="text-jet hover:bg-taupe/20 p-0 h-auto"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to My Products
-        </Button>
-      </div>
+      <ProductPageHeader
+        title="Edit Product"
+        description=""
+        onBack={() => router.push("/lender")}
+      />
 
       <Card>
         <CardHeader>
@@ -354,230 +330,22 @@ export default function EditProductPage() {
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Image URLs Section */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-jet">
-                Product Images
-              </Label>
-              <input
-                type="file"
-                ref={fileInputRef}
-                multiple
-                accept="image/*"
-                onChange={(e) => {
-                  if (e.target.files) {
-                    handleFileUpload(e.target.files);
-                  }
-                }}
-                style={{ display: "none" }}
-              />
-              <div className="flex gap-2">
-                <Input
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  placeholder="Add new image URL"
-                  className="border-taupe focus:border-jet"
-                  disabled={imageLoading}
-                />
-                <Button
-                  type="button"
-                  onClick={handleAddImage}
-                  disabled={imageLoading || !newImageUrl.trim()}
-                >
-                  Add
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={imageLoading}
-                >
-                  {imageLoading ? "Uploading..." : "Upload Files"}
-                </Button>
-              </div>
-              {imageLinks.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {imageLinks.map((url, idx) => (
-                    <div key={idx} className="relative group">
-                      <img
-                        src={url}
-                        alt={`Product image ${idx + 1}`}
-                        className="w-20 h-14 object-cover rounded border"
-                        style={{ background: "#f3f3f3" }}
-                      />
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="absolute -top-2 -right-2 bg-white/80 hover:bg-red-100 text-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
-                        onClick={() => handleDeleteImage(url)}
-                        disabled={imageLoading}
-                        title="Delete image"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            {/* Product Name */}
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm font-medium text-jet">
-                Product Name *
-              </Label>
-              <Input
-                id="name"
-                name="name"
-                value={form.name}
-                onChange={handleInputChange}
-                required
-                placeholder="Enter product name"
-                className="border-taupe focus:border-jet"
-              />
-            </div>
-            {/* Category and Condition */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label
-                  htmlFor="category"
-                  className="text-sm font-medium text-jet"
-                >
-                  Category *
-                </Label>
-                <select
-                  id="category"
-                  name="category"
-                  value={form.category}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, category: e.target.value }))
-                  }
-                  required
-                  className="border border-taupe focus:border-jet rounded px-3 py-2 w-full bg-white"
-                >
-                  <option value="" disabled>
-                    Select category
-                  </option>
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="condition"
-                  className="text-sm font-medium text-jet"
-                >
-                  Condition *
-                </Label>
-                <select
-                  id="condition"
-                  name="condition"
-                  value={form.condition}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, condition: e.target.value }))
-                  }
-                  required
-                  className="border border-taupe focus:border-jet rounded px-3 py-2 w-full bg-white"
-                >
-                  <option value="" disabled>
-                    Select condition
-                  </option>
-                  {conditions.map((cond) => (
-                    <option key={cond} value={cond}>
-                      {cond}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            {/* Description */}
-            <div className="space-y-2">
-              <Label
-                htmlFor="description"
-                className="text-sm font-medium text-jet"
-              >
-                Description *
-              </Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={form.description}
-                onChange={handleInputChange}
-                required
-                placeholder="Describe your product..."
-                rows={4}
-                className="border-taupe focus:border-jet"
-              />
-            </div>
-            {/* Price */}
-            <div className="space-y-2">
-              <Label htmlFor="price" className="text-sm font-medium text-jet">
-                Price per day (₹) *
-              </Label>
-              <Input
-                id="price"
-                name="price"
-                type="number"
-                value={form.price}
-                onChange={handleInputChange}
-                required
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                className="border-taupe focus:border-jet"
-              />
-            </div>
-            {/* Availability Switch */}
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="availability"
-                checked={form.availability}
-                onCheckedChange={handleSwitchChange}
-              />
-              <Label
-                htmlFor="availability"
-                className="text-sm font-medium text-jet"
-              >
-                Available for rent
-              </Label>
-            </div>
-            {/* Dates */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label
-                  htmlFor="start_date"
-                  className="text-sm font-medium text-jet"
-                >
-                  Available from
-                </Label>
-                <Input
-                  id="start_date"
-                  name="start_date"
-                  type="date"
-                  value={form.start_date}
-                  onChange={handleInputChange}
-                  className="border-taupe focus:border-jet"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="end_date"
-                  className="text-sm font-medium text-jet"
-                >
-                  Available until
-                </Label>
-                <Input
-                  id="end_date"
-                  name="end_date"
-                  type="date"
-                  value={form.end_date}
-                  onChange={handleInputChange}
-                  className="border-taupe focus:border-jet"
-                />
-              </div>
-            </div>
+            <EditImageManagement
+              imageLinks={imageLinks}
+              newImageUrl={newImageUrl}
+              setNewImageUrl={setNewImageUrl}
+              imageLoading={imageLoading}
+              onAddImage={handleAddImage}
+              onDeleteImage={handleDeleteImage}
+              onFileUpload={handleFileUpload}
+            />
+
+            <EditFormFields
+              form={form}
+              onInputChange={handleInputChange}
+              onSwitchChange={handleSwitchChange}
+              onSelectChange={handleSelectChange}
+            />
 
             {/* Save/Cancel Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
