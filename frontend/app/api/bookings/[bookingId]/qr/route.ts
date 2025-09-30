@@ -17,8 +17,8 @@ export async function GET(
 
   try {
     const bookingIdNum = Number(bookingId);
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
 
     // Get authenticated user
     const {
@@ -61,8 +61,8 @@ export async function GET(
       // Lender shows QR, borrower scans
       isAuthorized = booking.lender.uuid === authUser.id;
     } else if (flow === "return") {
-      // Borrower shows QR, lender scans
-      isAuthorized = booking.borrower.uuid === authUser.id;
+      // Lender shows QR, borrower scans (same as borrow flow)
+      isAuthorized = booking.lender.uuid === authUser.id;
     }
 
     if (!isAuthorized) {

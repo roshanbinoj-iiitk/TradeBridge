@@ -12,10 +12,12 @@ if (!supabaseUrl || !supabaseKey) {
   );
 }
 
-export const createClient = (cookieStore?: any) => {
+export const createClient = async (cookieStore?: any) => {
   // If cookieStore is provided, use SSR client (for authenticated requests)
   if (cookieStore) {
-    const store = cookieStore as any;
+    // Await the cookies if it's a function/promise
+    const store =
+      typeof cookieStore === "function" ? await cookieStore() : cookieStore;
     return createServerClient(supabaseUrl, supabaseKey, {
       cookies: {
         getAll() {
