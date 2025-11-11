@@ -12,33 +12,38 @@
 
     --background: var(--isabelline);
     --foreground: var(--jet);
-    
+
     --card: var(--isabelline);
     --card-foreground: var(--jet);
- 
+
     --popover: var(--isabelline);
     --popover-foreground: var(--jet);
- 
+
     --primary: var(--jet);
     --primary-foreground: var(--isabelline);
- 
+
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
- 
+
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
- 
+
     --accent: var(--battleship-gray);
     --accent-foreground: var(--isabelline);
- 
+
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: var(--platinum);
     --input: var(--platinum);
     --ring: var(--jet);
- 
+
     --radius: 0.5rem;
+
+    /* Font variables */
+    --font-inter: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      Roboto, sans-serif;
+    --font-playfair-display: "Times New Roman", Times, serif;
   }
 
   /* No dark mode specified, but leaving the structure for future use */

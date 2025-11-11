@@ -1,11 +1,12 @@
-import { Inter, Playfair_Display as PlayfairDisplay } from 'next/font/google';
+// Fallback fonts since Google Fonts are not accessible during build
+export const inter = {
+  variable: "--font-inter",
+  className: "",
+  style: {},
+};
 
-export const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-});
-
-export const playfairDisplay = PlayfairDisplay({
-  subsets: ['latin'],
-  variable: '--font-playfair-display',
-});
+export const playfairDisplay = {
+  variable: "--font-playfair-display",
+  className: "",
+  style: {},
+};
