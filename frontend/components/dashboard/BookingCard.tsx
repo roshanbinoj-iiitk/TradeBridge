@@ -8,7 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Calendar, IndianRupee, Scan, QrCode } from "lucide-react";
+import { Calendar, IndianRupee, Scan, QrCode, CreditCard } from "lucide-react";
 import { QRScanner } from "@/components/ui/qr-scanner";
 import { QRDisplay } from "@/components/ui/qr-display";
 import { Booking } from "@/types/db";
@@ -29,16 +29,49 @@ export default function BookingCard({
   onScanSuccess,
   onBookingAction,
 }: BookingCardProps) {
+  const handlePayment = async () => {
+    try {
+      const response = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          productId: booking.product_id,
+          bookingId: booking.booking_id,
+          rentalDays: Math.ceil(
+            (new Date(booking.end_date).getTime() - new Date(booking.start_date).getTime()) /
+              (1000 * 60 * 60 * 24)
+          ),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Failed to create payment session");
+        return;
+      }
+
+      // Redirect to Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      alert("An error occurred while processing payment");
+    }
+  };
   const getStatusBadge = (status: string) => {
     const variants = {
       pending: "bg-yellow-100 text-yellow-800",
       confirmed: "bg-blue-100 text-blue-800",
       approved: "bg-green-100 text-green-800",
+      paid: "bg-purple-100 text-purple-800",
       active: "bg-green-100 text-green-800",
       cancelled: "bg-red-100 text-red-800",
       rejected: "bg-red-100 text-red-800",
       completed: "bg-blue-100 text-blue-800",
-      paid: "bg-green-100 text-green-800",
       disputed: "bg-orange-100 text-orange-800",
     };
 
@@ -91,7 +124,14 @@ export default function BookingCard({
       </div>
 
       <div className="flex items-center space-x-2 mt-2">
-        {booking.status === "confirmed" && (
+        {booking.status === "confirmed" && type === "borrowing" && (
+          <Button size="sm" variant="outline" onClick={handlePayment}>
+            <CreditCard className="h-4 w-4 mr-1" />
+            Pay Now
+          </Button>
+        )}
+
+        {booking.status === "paid" && (
           <Dialog>
             <DialogTrigger asChild>
               <Button size="sm" variant="outline">

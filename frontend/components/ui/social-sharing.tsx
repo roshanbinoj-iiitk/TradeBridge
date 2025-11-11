@@ -63,25 +63,31 @@ export default function SocialSharing({
     // Generate the share URL based on the type
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
     let url = "";
+    let qrUrl = "";
 
     switch (shareType) {
       case "product":
         url = `${baseUrl}/products/${productId}`;
+        // QR code points to payment flow for quick checkout
+        qrUrl = `${baseUrl}/pay/qr?productId=${productId}&days=1`;
         break;
       case "post":
         url = `${baseUrl}/forum/post/${postId}`;
+        qrUrl = url;
         break;
       case "profile":
         url = `${baseUrl}/profile/${profileId}`;
+        qrUrl = url;
         break;
     }
 
     setShareUrl(url);
 
-    // Generate QR code data URL (you'd need a QR code library for actual implementation)
+    // Generate QR code data URL
+    // For products, QR points to payment flow; for others, to the regular URL
     setQrCodeData(
       `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-        url
+        qrUrl
       )}`
     );
   }, [shareType, productId, postId, profileId]);
@@ -360,6 +366,12 @@ export default function SocialSharing({
           {/* QR Code */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">QR Code</Label>
+            {shareType === "product" && (
+              <p className="text-xs text-gray-500">
+                Scanning this QR code will take users directly to the payment
+                checkout for this product.
+              </p>
+            )}
             <div className="flex items-center justify-center p-4 bg-white border rounded-lg">
               <img src={qrCodeData} alt="QR Code" className="w-32 h-32" />
             </div>

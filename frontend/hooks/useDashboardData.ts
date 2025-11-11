@@ -73,12 +73,18 @@ export function useDashboardData(user: User | null) {
       // Calculate stats
       const activeBorrowings =
         borrowingBookings?.filter(
-          (b) => b.status === "active" || b.status === "confirmed"
+          (b) =>
+            b.status === "active" ||
+            b.status === "confirmed" ||
+            b.status === "paid"
         ).length || 0;
 
       const activeLendings =
         lendingBookings?.filter(
-          (b) => b.status === "active" || b.status === "confirmed"
+          (b) =>
+            b.status === "active" ||
+            b.status === "confirmed" ||
+            b.status === "paid"
         ).length || 0;
 
       const pendingRequests =

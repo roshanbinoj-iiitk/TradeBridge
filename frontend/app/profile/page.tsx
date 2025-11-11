@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Star } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import ProfileSkeleton from "./ProfileSkeleton";
+import StripeConnectCard from "@/components/shared/StripeConnectCard";
 
 function ProfilePage() {
   const { user, loading: authLoading, isAuthenticated } = useAuthRedirect();
@@ -165,6 +166,8 @@ function ProfilePage() {
           </Button>
         </CardContent>
       </Card>
+      <Separator className="my-8" />
+      <StripeConnectCard userId={user?.id} />
       <Separator className="my-8" />
       <Card>
         <CardHeader>

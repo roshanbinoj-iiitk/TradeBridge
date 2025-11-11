@@ -53,6 +53,34 @@ TradeBridge is a full-stack project with a Next.js/TypeScript frontend and a Pyt
 
 ## Features
 
+### Stripe Payment Integration
+
+TradeBridge includes a complete Stripe Connect integration for marketplace payments:
+
+#### Features:
+- **Stripe Connect**: Lenders connect their Stripe accounts to receive payments directly
+- **QR Code Payments**: Product QR codes link to instant checkout
+- **Platform Fees**: Automatic 10% platform fee with 90% going to lenders
+- **Secure Checkout**: Full PCI compliance via Stripe
+
+#### Quick Setup:
+1. Add Stripe keys to `.env.local`:
+   ```env
+   STRIPE_SECRET_KEY=sk_test_your_key
+   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_key
+   NEXT_PUBLIC_ORIGIN=http://localhost:3000
+   ```
+
+2. Run the database migration:
+   ```bash
+   psql -d your_database -f add_stripe_account_migration.sql
+   ```
+
+3. **As a Lender**: Visit Profile → Connect Stripe Account
+4. **As a Borrower**: Scan product QR code → Auto-redirect to checkout
+
+📚 **Full Guide**: See [STRIPE_INTEGRATION_GUIDE.md](./STRIPE_INTEGRATION_GUIDE.md) for detailed setup, testing, and troubleshooting.
+
 ### QR Collection System
 
 TradeBridge includes a secure QR code-based collection system for seamless item handovers:
