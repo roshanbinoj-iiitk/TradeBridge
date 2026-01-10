@@ -117,6 +117,10 @@ TradeBridge includes a secure QR code-based collection system for seamless item 
 - The backend is configured for Vercel deployment (see `backend/vercel.json`).
 - The frontend can be deployed using Vercel or any platform supporting Next.js.
 
+## Contributors
+- Roshan Binoj
+- Nikhil Kumar
+
 ## License
 
 This project is licensed under the MIT License.
